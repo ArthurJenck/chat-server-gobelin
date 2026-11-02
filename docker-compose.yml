@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  web:
+    image: chat-goblin-web
+    build:
+      context: ./web
+    volumes:
+      - ./web:/app
+    ports:
+      - 8080:8080
+    links:
+      - api
+  api:
+    image: chat-goblin-api
+    build:
+      context: ./api
+    volumes:
+      - ./api:/app
+    ports:
+      - 4000:4000
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    links:
+      - db
+  db:
+    image: chat-goblin-db
+    build:
+      context: ./db
+    restart: always
+    environment:
+      - POSTGRES_DB=chat-goblin-db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - 6432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
