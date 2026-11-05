@@ -3,3 +3,5 @@ build
 dist
 dev-dist
 .react-router
+.legacy
+.vite
