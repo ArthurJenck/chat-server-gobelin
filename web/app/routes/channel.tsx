@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Leva, useControls } from 'leva'
 import { ApiError, getAccount, getMessages, getToken, sendMessage, type Message } from '../api'
-import MessageStaff from '../MessageStaff'
+import MessageStaff from '../staff/MessageStaff'
+import StaffSettingsPanel from '../staff/StaffSettingsPanel'
+import { DEFAULT_STAFF_SETTINGS } from '../staff/staffConfig'
 
 export default function ChannelPage() {
     const { channelId } = useParams()
@@ -14,16 +15,7 @@ export default function ChannelPage() {
     const [loading, setLoading] = useState(true)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
-    const controls = useControls('Atelier de la portée', {
-        Courbure: { value: 0, min: 0, max: 30, step: 1 },
-        Espacement: { value: 12, min: 6, max: 18, step: 1 },
-        Épaisseur: { value: 2, min: 1, max: 4, step: 0.5 },
-    })
-    const staffSettings = {
-        curvature: controls.Courbure,
-        spacing: controls.Espacement,
-        thickness: controls.Épaisseur,
-    }
+    const [staffSettings, setStaffSettings] = useState(DEFAULT_STAFF_SETTINGS)
 
     function handleError(cause: unknown) {
         if (cause instanceof ApiError && cause.status === 401) {
@@ -98,7 +90,7 @@ export default function ChannelPage() {
 
     return (
         <main>
-            <Leva />
+            <StaffSettingsPanel onChange={setStaffSettings} />
             <p><Link to="/">Retour aux channels</Link></p>
             <h1>{channelName || 'Channel'}</h1>
             {loading && <p>Chargement des messages…</p>}
