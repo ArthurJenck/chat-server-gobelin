@@ -9,7 +9,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 
 import type { Route } from './+types/root'
-import InstallPrompt from './install-prompt'
+import InstallPrompt from './InstallPrompt'
 
 export const links: Route.LinksFunction = () => [
     { rel: 'manifest', href: '/manifest.webmanifest' },

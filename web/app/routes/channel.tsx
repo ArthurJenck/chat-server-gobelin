@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { Leva, useControls } from 'leva'
 import { ApiError, getAccount, getMessages, getToken, sendMessage, type Message } from '../api'
+import MessageStaff from '../MessageStaff'
 
 export default function ChannelPage() {
     const { channelId } = useParams()
@@ -12,6 +14,16 @@ export default function ChannelPage() {
     const [loading, setLoading] = useState(true)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
+    const controls = useControls('Atelier de la portée', {
+        Courbure: { value: 0, min: 0, max: 30, step: 1 },
+        Espacement: { value: 12, min: 6, max: 18, step: 1 },
+        Épaisseur: { value: 2, min: 1, max: 4, step: 0.5 },
+    })
+    const staffSettings = {
+        curvature: controls.Courbure,
+        spacing: controls.Espacement,
+        thickness: controls.Épaisseur,
+    }
 
     function handleError(cause: unknown) {
         if (cause instanceof ApiError && cause.status === 401) {
@@ -86,6 +98,7 @@ export default function ChannelPage() {
 
     return (
         <main>
+            <Leva />
             <p><Link to="/">Retour aux channels</Link></p>
             <h1>{channelName || 'Channel'}</h1>
             {loading && <p>Chargement des messages…</p>}
@@ -99,6 +112,7 @@ export default function ChannelPage() {
                                 <li key={`${message.creation_date}-${message.user_id}-${index}`}>
                                     <strong>{message.user}</strong> : {message.content}
                                     <time dateTime={message.creation_date}> ({new Date(message.creation_date).toLocaleString('fr-FR')})</time>
+                                    <MessageStaff user={message.user} settings={staffSettings} />
                                 </li>
                             ))}
                         </ul>
