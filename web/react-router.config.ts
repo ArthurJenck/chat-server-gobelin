@@ -1,5 +1,5 @@
 import type { Config } from '@react-router/dev/config'
 
 export default {
-    ssr: true,
+    ssr: process.env.STATIC_WORKSHOP !== '1',
 } satisfies Config
