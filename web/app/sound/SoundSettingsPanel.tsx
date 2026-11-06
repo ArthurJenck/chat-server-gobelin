@@ -23,6 +23,7 @@ export default function SoundSettingsPanel({
     const fileInput = useRef<HTMLInputElement>(null)
     const densityRef = useRef(density)
     const settingsRef = useRef(initialSettings)
+    const baseSettingsRef = useRef(initialSettings)
     const setRef = useRef<(settings: SoundSettings) => void>(() => {})
     densityRef.current = density
 
@@ -47,16 +48,11 @@ export default function SoundSettingsPanel({
                         Mots: 'words',
                     },
                 },
-                groupSize: number('groupSize', 'Taille des groupes'),
-                offset: number('offset', 'Offset'),
-                splitNoise: {
-                    value: initialSettings.splitNoise,
-                    label: 'Noise actif',
-                },
-                splitNoiseAmount: number('splitNoiseAmount', 'Amplitude noise'),
                 crossWordSyllables: {
                     value: initialSettings.crossWordSyllables,
-                    label: 'Entre les mots',
+                    label: 'Lier les mots',
+                    render: (get) =>
+                        get('Découpage.segmentation') === 'syllables',
                 },
                 densité: monitor(
                     () => densityRef.current.toFixed(1) + ' notes/s'
@@ -66,20 +62,34 @@ export default function SoundSettingsPanel({
                 speedMode: {
                     value: initialSettings.speedMode,
                     label: 'Mode',
-                    options: { Fixe: 'fixed', 'Selon la longueur': 'length' },
+                    options: {
+                        'Durée fixe': 'fixed',
+                        'Durée adaptative': 'length',
+                    },
                 },
-                intervalMs: number('intervalMs', 'Intervalle (ms)'),
-                lengthFactor: number('lengthFactor', 'Facteur longueur'),
-                maxDuration: number('maxDuration', 'Départs avant (s)'),
-                wordGap: number('wordGap', 'Pause entre mots'),
+                intervalMs: number('intervalMs', 'Pause notes (ms)'),
+                wordGap: number('wordGap', 'Pause mots (ms)'),
+                gate: number('gate', 'Longueur note'),
+                'Durée fixe': folder(
+                    {
+                        maxDuration: number('maxDuration', 'Durée totale (s)'),
+                    },
+                    { render: (get) => get('Vitesse.speedMode') === 'fixed' }
+                ),
+                'Durée adaptative': folder(
+                    {
+                        lengthFactor: number('lengthFactor', 'Accélération'),
+                    },
+                    { render: (get) => get('Vitesse.speedMode') === 'length' }
+                ),
             }),
             'Gamme et mélodie': folder({
                 algorithm: {
                     value: initialSettings.algorithm,
                     label: 'Générateur',
                     options: {
-                        Ossature: 'skeleton',
-                        Transitions: 'transitions',
+                        'Courbe guidée': 'skeleton',
+                        'Notes voisines': 'transitions',
                     },
                 },
                 mode: {
@@ -87,11 +97,22 @@ export default function SoundSettingsPanel({
                     label: 'Mode',
                     options: { Majeur: 'major', Mineur: 'minor' },
                 },
-                relation: {
-                    value: initialSettings.relation,
-                    label: 'Gammes',
-                    options: { Relatives: 'relative', Parallèles: 'parallel' },
-                },
+                'Mode mineur': folder(
+                    {
+                        relation: {
+                            value: initialSettings.relation,
+                            label: 'Lien des gammes',
+                            options: {
+                                Relatives: 'relative',
+                                Parallèles: 'parallel',
+                            },
+                        },
+                    },
+                    {
+                        render: (get) =>
+                            get('Gamme et mélodie.mode') === 'minor',
+                    }
+                ),
                 root: {
                     value: initialSettings.root,
                     label: 'Note majeure',
@@ -111,7 +132,6 @@ export default function SoundSettingsPanel({
                     },
                 },
                 octave: number('octave', 'Octave'),
-                range: number('range', 'Tessiture (demi-tons)'),
                 contour: {
                     value: initialSettings.contour,
                     label: 'Contour',
@@ -122,38 +142,64 @@ export default function SoundSettingsPanel({
                         Aléatoire: 'random',
                     },
                 },
-                phraseLength: number('phraseLength', 'Longueur de phrase'),
-                repetitionWeight: number('repetitionWeight', 'Répétitions'),
-                stepWeight: number('stepWeight', 'Petits pas'),
-                leapWeight: number('leapWeight', 'Sauts'),
-                tonicWeight: number('tonicWeight', 'Tonique'),
-                maxLeapSemitones: number('maxLeapSemitones', 'Saut global max'),
+                'Courbe guidée': folder(
+                    {
+                        phraseLength: number(
+                            'phraseLength',
+                            'Notes par courbe'
+                        ),
+                        'À quoi ça sert': monitor(
+                            () =>
+                                'La courbe recommence après ce nombre de notes.'
+                        ),
+                    },
+                    {
+                        render: (get) =>
+                            get('Gamme et mélodie.algorithm') === 'skeleton',
+                    }
+                ),
+                melodyMovement: number('melodyMovement', 'Variation/mot'),
                 limitWithinWord: {
                     value: initialSettings.limitWithinWord,
-                    label: 'Limiter dans un mot',
+                    label: 'Limiter par mot',
                 },
-                maxWithinWordSemitones: number(
-                    'maxWithinWordSemitones',
-                    'Écart intra-mot max'
+                'Limiter par mot': folder(
+                    {
+                        maxWithinWordSemitones: number(
+                            'maxWithinWordSemitones',
+                            'Écart max'
+                        ),
+                    },
+                    { render: (get) => get('Gamme et mélodie.limitWithinWord') }
                 ),
-                restChance: number('restChance', 'Probabilité de pause'),
-                seed: number('seed', 'Graine'),
+                restChance: number('restChance', 'Chance de pause'),
+                seed: number('seed', 'Seed'),
             }),
-            Son: folder({
-                gate: number('gate', 'Longueur note'),
-                filterFrequency: number('filterFrequency', 'Filtre (Hz)'),
-                resonance: number('resonance', 'Résonance'),
-                volume: number('volume', 'Volume'),
-            }),
-            Effets: folder({
-                echoEnabled: {
-                    value: initialSettings.echoEnabled,
-                    label: 'Écho actif',
+            Son: folder(
+                {
+                    filterFrequency: number('filterFrequency', 'Filtre (Hz)'),
+                    resonance: number('resonance', 'Résonance'),
+                    volume: number('volume', 'Volume'),
                 },
-                echoDelay: number('echoDelay', 'Délai (s)'),
-                echoFeedback: number('echoFeedback', 'Répétitions'),
-                echoMix: number('echoMix', 'Mélange'),
-            }),
+                { collapsed: true }
+            ),
+            Effets: folder(
+                {
+                    echoEnabled: {
+                        value: initialSettings.echoEnabled,
+                        label: 'Écho actif',
+                    },
+                    'Options écho': folder(
+                        {
+                            echoDelay: number('echoDelay', 'Délai (s)'),
+                            echoFeedback: number('echoFeedback', 'Répétitions'),
+                            echoMix: number('echoMix', 'Mélange'),
+                        },
+                        { render: (get) => get('Effets.echoEnabled') }
+                    ),
+                },
+                { collapsed: true }
+            ),
             Presets: folder({
                 'Exporter JSON': button(() => {
                     const blob = new Blob(
@@ -179,6 +225,7 @@ export default function SoundSettingsPanel({
     const settings = useMemo(
         () =>
             ({
+                ...baseSettingsRef.current,
                 ...values,
                 instrument: initialSettings.instrument,
             }) as SoundSettings,
@@ -186,7 +233,15 @@ export default function SoundSettingsPanel({
     )
     settingsRef.current = settings
     setRef.current = (next) => {
-        set(next)
+        baseSettingsRef.current = next
+        set(
+            Object.fromEntries(
+                Object.keys(values).map((key) => [
+                    key,
+                    next[key as keyof SoundSettings],
+                ])
+            ) as unknown as Parameters<typeof set>[0]
+        )
         onChange(next)
     }
 

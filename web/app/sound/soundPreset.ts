@@ -3,12 +3,12 @@ import { DEFAULT_SOUND_SETTINGS, SOUND_RANGES, type SoundSettings } from './soun
 const STORAGE_KEY = 'gobelin_sound_settings_v1'
 
 export function serializePreset(settings: SoundSettings) {
-    return JSON.stringify({ version: 3, settings }, null, 2)
+    return JSON.stringify({ version: 4, settings }, null, 2)
 }
 
 export function parsePreset(value: string): SoundSettings {
     const parsed: unknown = JSON.parse(value)
-    if (!parsed || typeof parsed !== 'object' || !('version' in parsed) || ![1, 2, 3].includes(parsed.version as number)
+    if (!parsed || typeof parsed !== 'object' || !('version' in parsed) || ![1, 2, 3, 4].includes(parsed.version as number)
         || !('settings' in parsed) || !parsed.settings || typeof parsed.settings !== 'object') {
         throw new Error('Preset incompatible.')
     }
@@ -16,7 +16,14 @@ export function parsePreset(value: string): SoundSettings {
     if (parsed.version === 1 && !['sine', 'triangle', 'sawtooth', 'square'].includes(saved.waveform as string)) {
         throw new Error('Preset invalide.')
     }
-    const migrated: Record<string, unknown> = { ...saved, instrument: parsed.version === 1 ? 'piano' : saved.instrument }
+    const migrated: Record<string, unknown> = {
+        ...saved,
+        instrument: parsed.version === 1 ? 'piano' : saved.instrument,
+        melodyMovement: saved.melodyMovement ?? DEFAULT_SOUND_SETTINGS.melodyMovement,
+        maxDuration: typeof saved.maxDuration === 'number' ? Math.min(saved.maxDuration, 10) : saved.maxDuration,
+        wordGap: parsed.version === 4 ? saved.wordGap
+            : typeof saved.wordGap === 'number' && saved.wordGap <= 3 ? Math.round(saved.wordGap * 300) : saved.wordGap,
+    }
     const settings = Object.fromEntries(Object.keys(DEFAULT_SOUND_SETTINGS).map((key) => [key, migrated[key]]))
     const valid = (Object.keys(DEFAULT_SOUND_SETTINGS) as (keyof SoundSettings)[]).every((key) => {
         const expected = DEFAULT_SOUND_SETTINGS[key]

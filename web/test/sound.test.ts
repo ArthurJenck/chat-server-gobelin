@@ -5,7 +5,7 @@ import { parsePreset, serializePreset } from '../app/sound/soundPreset'
 
 describe('sound workshop', () => {
     it('keeps every text group within the maximum onset duration', () => {
-        const settings = { ...DEFAULT_SOUND_SETTINGS, segmentation: 'characters' as const, maxDuration: 4 }
+        const settings = { ...DEFAULT_SOUND_SETTINGS, segmentation: 'characters' as const, speedMode: 'fixed' as const, maxDuration: 4 }
         const plan = createSoundPlan('a'.repeat(200), settings)
 
         expect(plan.events).toHaveLength(200)
@@ -33,8 +33,8 @@ describe('sound workshop', () => {
 
         expect(relative.tonicMidi).toBe(57)
         expect(parallel.tonicMidi).toBe(60)
-        expect(relative.events.at(-1)?.midi).toBe(57)
-        expect(parallel.events.at(-1)?.midi).toBe(60)
+        expect(relative.events.every((event) => event.midi !== null)).toBe(true)
+        expect(parallel.events.every((event) => event.midi !== null)).toBe(true)
     })
 
     it('generates stable in-scale notes with both algorithms', () => {
@@ -65,6 +65,8 @@ describe('sound workshop', () => {
 
         expect(across.some((group) => group.wordId === null)).toBe(true)
         expect(within.every((group) => group.wordId !== null)).toBe(true)
+        expect(across.map((group) => group.text.toLowerCase())).toEqual(['j’ai', 'meau', 'ssi'])
+        expect(within).toHaveLength(4)
     })
 
     it('keeps a consonant-only word in cross-word syllable mode', () => {
@@ -72,9 +74,28 @@ describe('sound workshop', () => {
         expect(groups.map((group) => group.text).join('')).toBe('psst')
     })
 
+    it('varies notes inside a short word and changes the contour on a short message', () => {
+        const text = 'J’aime aussi'
+        const rising = createSoundPlan(text, { ...DEFAULT_SOUND_SETTINGS, contour: 'ascending' })
+        const falling = createSoundPlan(text, { ...DEFAULT_SOUND_SETTINGS, contour: 'descending' })
+
+        expect(rising.events[0].midi).not.toBe(rising.events[1].midi)
+        expect(rising.events.map((event) => event.midi)).not.toEqual(falling.events.map((event) => event.midi))
+    })
+
+    it('adds a pause without dropping a syllable', () => {
+        const text = 'J’aime aussi'
+        const plain = createSoundPlan(text, DEFAULT_SOUND_SETTINGS)
+        const paused = createSoundPlan(text, { ...DEFAULT_SOUND_SETTINGS, restChance: 0.8 })
+
+        expect(paused.events.map((event) => event.text)).toEqual(plain.events.map((event) => event.text))
+        expect(paused.events.every((event) => event.midi !== null)).toBe(true)
+        expect(paused.events.at(-1)!.start).toBeGreaterThan(plain.events.at(-1)!.start)
+    })
+
     it('round trips a versioned settings preset', () => {
         const settings = { ...DEFAULT_SOUND_SETTINGS, instrument: 'trumpet' as const, maxWithinWordSemitones: 2, echoEnabled: true }
-        expect(JSON.parse(serializePreset(settings)).version).toBe(3)
+        expect(JSON.parse(serializePreset(settings)).version).toBe(4)
         expect(parsePreset(serializePreset(settings))).toEqual(settings)
         expect(() => parsePreset('{"version": 99}')).toThrow()
         expect(() => parsePreset(serializePreset({ ...settings, instrument: 'flute' as 'trumpet' }))).toThrow()

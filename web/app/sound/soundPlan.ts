@@ -55,20 +55,22 @@ function baseGroups(text: string, settings: SoundSettings): TextGroup[] {
         })
     }
 
-    const normalized = normalizeVowels(text)
-    const matches = [...normalized.matchAll(SYLLABLE_PATTERN)]
+    const compact = [...text].map((char, index) => ({ char, index })).filter(({ char }) => !/\s/.test(char))
+    const joined = compact.map(({ char }) => char).join('')
+    const normalized = normalizeVowels(joined)
+    const matches = [...normalized.matchAll(/[^aeiouy]*[aeiouy]+/gi)]
     const parts = matches.map((part) => {
-        const start = part.index
-        const end = start + part[0].length
+        const start = compact[part.index].index
+        const end = compact[part.index + part[0].length - 1].index + 1
         const matchingWords = words.filter((word) => word.start < end && word.end > start)
         return {
-            text: text.slice(start, end),
-            wordId: matchingWords.length === 1 && !/\s/.test(text.slice(start, end)) ? matchingWords[0].wordId : null,
+            text: joined.slice(part.index, part.index + part[0].length),
+            wordId: matchingWords.length === 1 ? matchingWords[0].wordId : null,
             start,
         }
     })
     for (const word of words) {
-        if (!matches.some((part) => part.index < word.end && part.index + part[0].length > word.start)) {
+        if (!parts.some((part) => part.start < word.end && part.start + part.text.length > word.start)) {
             parts.push({ text: word.text, wordId: word.wordId, start: word.start })
         }
     }
@@ -76,24 +78,7 @@ function baseGroups(text: string, settings: SoundSettings): TextGroup[] {
 }
 
 export function segmentText(text: string, settings: SoundSettings): TextGroup[] {
-    const units = baseGroups(text, settings)
-    const random = randomFromSeed(textSeed(text, settings.seed + 17))
-    const groups: TextGroup[] = []
-    let index = 0
-
-    while (index < units.length) {
-        const firstSize = groups.length === 0 ? Math.max(1, settings.groupSize - settings.offset % settings.groupSize) : settings.groupSize
-        const noise = settings.splitNoise ? Math.round((random() * 2 - 1) * settings.splitNoiseAmount) : 0
-        const size = Math.max(1, firstSize + noise)
-        const chunk = units.slice(index, index + size)
-        groups.push({
-            text: chunk.map((unit) => unit.text).join(''),
-            wordId: chunk.every((unit) => unit.wordId !== null && unit.wordId === chunk[0].wordId) ? chunk[0].wordId : null,
-        })
-        index += size
-    }
-
-    return groups
+    return baseGroups(text, settings)
 }
 
 function pickWeighted(candidates: number[], weight: (pitch: number) => number, random: () => number) {
@@ -113,23 +98,16 @@ function contourTarget(progress: number, settings: SoundSettings, tonic: number,
         : settings.contour === 'descending' ? 1 - progress
             : settings.contour === 'random' ? random()
                 : 1 - Math.abs(2 * progress - 1)
-    return tonic + amount * settings.range
+    return tonic - 6 + amount * 12
 }
 
-function skeletonTargets(count: number, pitches: number[], tonic: number, settings: SoundSettings, random: () => number) {
+function skeletonTargets(count: number, tonic: number, settings: SoundSettings, random: () => number) {
     const targets = Array<number>(count).fill(tonic)
-    let startPitch = tonic
     for (let start = 0; start < count; start += settings.phraseLength) {
-        const end = Math.min(count - 1, start + settings.phraseLength - 1)
-        const desired = end === count - 1 ? tonic
-            : contourTarget(end / Math.max(1, count - 1), settings, tonic, random)
-        const endPitch = pitches.reduce((best, pitch) =>
-            Math.abs(pitch - desired) < Math.abs(best - desired) ? pitch : best, pitches[0])
-        for (let index = start; index <= end; index += 1) {
-            const progress = (index - start) / Math.max(1, end - start)
-            targets[index] = startPitch + (endPitch - startPitch) * progress
+        const length = Math.min(settings.phraseLength, count - start)
+        for (let index = 0; index < length; index += 1) {
+            targets[start + index] = contourTarget((index + 0.5) / length, settings, tonic, random)
         }
-        startPitch = endPitch
     }
     return targets
 }
@@ -141,58 +119,54 @@ export function createSoundPlan(text: string, settings: SoundSettings): SoundPla
     if (groups.length === 0) return { events: [], tonicMidi, density: 0 }
 
     const scale = settings.mode === 'major' ? MAJOR_INTERVALS : MINOR_INTERVALS
-    const pitches = Array.from({ length: settings.range + 1 }, (_, interval) => tonicMidi + interval)
-        .filter((pitch) => scale.includes((pitch - tonicMidi) % 12))
+    const pitches = Array.from({ length: 13 }, (_, interval) => tonicMidi - 6 + interval)
+        .filter((pitch) => scale.includes(((pitch - tonicMidi) % 12 + 12) % 12))
     const random = randomFromSeed(textSeed(text, settings.seed))
     const skeleton = settings.algorithm === 'skeleton'
-        ? skeletonTargets(groups.length, pitches, tonicMidi, settings, random) : []
+        ? skeletonTargets(groups.length, tonicMidi, settings, random) : []
     const baseInterval = settings.intervalMs / 1000
         / (settings.speedMode === 'length' ? 1 + settings.lengthFactor * Math.log2(Math.max(1, groups.length)) : 1)
-    const gaps = groups.slice(1).map((group, index) =>
-        baseInterval * (group.wordId !== null && groups[index].wordId !== null && group.wordId !== groups[index].wordId
-            ? 1 + settings.wordGap : 1),
-    )
+    const gaps = groups.slice(1).map((group, index) => {
+        const betweenWords = group.wordId !== null && groups[index].wordId !== null && group.wordId !== groups[index].wordId
+        return baseInterval * (1 + (random() < settings.restChance ? 1 : 0))
+            + (betweenWords ? settings.wordGap / 1000 : 0)
+    })
     const rawDuration = gaps.reduce((sum, gap) => sum + gap, 0)
-    const timeScale = rawDuration > settings.maxDuration ? settings.maxDuration / rawDuration : 1
+    const timeScale = settings.speedMode === 'fixed' && rawDuration > settings.maxDuration ? settings.maxDuration / rawDuration : 1
     const starts = [0]
-    for (const gap of gaps) starts.push(starts.at(-1)! + gap * timeScale)
+    for (const gap of gaps) {
+        const next = starts.at(-1)! + gap * timeScale
+        starts.push(settings.speedMode === 'fixed' ? Math.min(settings.maxDuration, next) : next)
+    }
 
     const events: SoundEvent[] = []
-    const lastIndexByWord = new Map<number, number>()
-    groups.forEach((group, index) => {
-        if (group.wordId !== null) lastIndexByWord.set(group.wordId, index)
-    })
     let previousPitch = tonicMidi
     for (let index = 0; index < groups.length; index += 1) {
         const group = groups[index]
         const sameWord = index > 0 && group.wordId !== null && group.wordId === groups[index - 1].wordId
-        const final = index === groups.length - 1
         let candidates = pitches.filter((pitch) =>
-            Math.abs(pitch - previousPitch) <= settings.maxLeapSemitones
-            && (!sameWord || !settings.limitWithinWord || Math.abs(pitch - previousPitch) <= settings.maxWithinWordSemitones),
+            !sameWord || !settings.limitWithinWord || Math.abs(pitch - previousPitch) <= settings.maxWithinWordSemitones,
         )
-        if (settings.limitWithinWord && group.wordId !== null) {
-            const remaining = lastIndexByWord.get(group.wordId)! - index
-            if (index + remaining === groups.length - 1) {
-                candidates = candidates.filter((pitch) => Math.abs(pitch - tonicMidi) <= remaining * settings.maxWithinWordSemitones)
-            }
-        }
         if (!candidates.length) candidates = [previousPitch]
-        const progress = groups.length === 1 ? 1 : index / (groups.length - 1)
+        if (sameWord && settings.melodyMovement === 0) candidates = [previousPitch]
+        else if (sameWord && candidates.some((pitch) => pitch !== previousPitch)) {
+            candidates = candidates.filter((pitch) => pitch !== previousPitch)
+        }
+        const progress = (index + 0.5) / groups.length
         const target = settings.algorithm === 'skeleton' ? skeleton[index]
             : contourTarget(progress, settings, tonicMidi, random)
-        const pitch = final ? tonicMidi : index === 0 ? tonicMidi : pickWeighted(candidates, (candidate) => {
+        const pitch = pickWeighted(candidates, (candidate) => {
             const interval = Math.abs(candidate - previousPitch)
-            const movement = interval === 0 ? settings.repetitionWeight
-                : interval <= 2 ? settings.stepWeight : settings.leapWeight
-            const tonal = candidate === tonicMidi ? 1 + settings.tonicWeight : 1
+            const movement = sameWord
+                ? interval === 0 ? Math.max(0.1, 3 - settings.melodyMovement * 0.4)
+                    : interval <= 4 ? 1 + settings.melodyMovement : 0.4
+                : interval === 0 ? 0.4 : 1.5
             const shape = settings.algorithm === 'skeleton'
-                ? 1 / (1 + Math.abs(candidate - target)) ** 2
-                : 1 / (1 + Math.max(0, interval - 2) * 0.5)
-            return movement * tonal * shape
+                ? 1 / (1 + Math.abs(candidate - target)) ** 1.5
+                : 1 / (1 + Math.abs(candidate - target) * 0.3)
+            return movement * shape
         }, random)
-        const rest = !final && index > 0 && random() < settings.restChance
-        events.push({ ...group, start: starts[index], midi: rest ? null : pitch })
+        events.push({ ...group, start: starts[index], midi: pitch })
         previousPitch = pitch
     }
 

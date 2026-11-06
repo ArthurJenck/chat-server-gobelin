@@ -2,6 +2,8 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import { renderApp } from './render-app'
+import { DEFAULT_SOUND_SETTINGS } from '../app/sound/soundConfig'
+import { serializePreset } from '../app/sound/soundPreset'
 
 const playback = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn() }))
 vi.mock('../app/sound/audioEngine', () => ({
@@ -14,9 +16,26 @@ it('opens the sound workshop without signing in', async () => {
     await userEvent.click(screen.getByRole('link', { name: 'Atelier son' }))
 
     expect(screen.getByRole('textbox', { name: 'Texte' })).toBeInTheDocument()
+    expect(screen.getByText('Accélération')).toBeInTheDocument()
+    expect(screen.getByText('Notes par courbe')).toBeInTheDocument()
+    expect(screen.queryByText('Durée totale (s)')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled()
     expect(screen.getByRole('link', { name: 'Retour' })).toHaveAttribute('href', '/login')
     expect(screen.queryByRole('heading')).not.toBeInTheDocument()
+})
+
+it('resets saved sound settings', async () => {
+    window.localStorage.setItem('gobelin_sound_settings_v1', serializePreset({
+        ...DEFAULT_SOUND_SETTINGS,
+        intervalMs: 700,
+        melodyMovement: 9,
+    }))
+    renderApp('/atelier-son')
+
+    await userEvent.click(screen.getByText('Réinitialiser'))
+
+    await waitFor(() => expect(JSON.parse(window.localStorage.getItem('gobelin_sound_settings_v1')!).settings.intervalMs).toBe(300))
+    expect(JSON.parse(window.localStorage.getItem('gobelin_sound_settings_v1')!).settings.melodyMovement).toBe(5)
 })
 
 it('starts and stops a text melody from the workshop', async () => {
