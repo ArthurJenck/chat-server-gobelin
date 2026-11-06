@@ -5,4 +5,5 @@ export default [
     route('login', 'routes/login.tsx'),
     route('register', 'routes/register.tsx'),
     route('channels/:channelId', 'routes/channel.tsx'),
+    route('atelier-son', 'routes/sound-lab.tsx'),
 ] satisfies RouteConfig

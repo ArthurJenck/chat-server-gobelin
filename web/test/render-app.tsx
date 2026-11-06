@@ -5,6 +5,7 @@ import ChannelPage from '../app/routes/channel'
 import Home from '../app/routes/home'
 import Login from '../app/routes/login'
 import Register from '../app/routes/register'
+import SoundLab from '../app/routes/sound-lab'
 
 export function renderApp(path = '/') {
     const router = createMemoryRouter([
@@ -15,6 +16,7 @@ export function renderApp(path = '/') {
                 { path: '/login', element: <Login /> },
                 { path: '/register', element: <Register /> },
                 { path: '/channels/:channelId', element: <ChannelPage /> },
+                { path: '/atelier-son', element: <SoundLab /> },
             ],
         },
     ], { initialEntries: [path] })

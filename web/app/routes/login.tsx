@@ -36,6 +36,7 @@ export default function Login() {
                 <button type="submit" disabled={busy}>Se connecter</button>
             </form>
             <p><Link to="/register">Créer un compte</Link></p>
+            <p><Link to="/atelier-son">Atelier son</Link></p>
         </main>
     )
 }

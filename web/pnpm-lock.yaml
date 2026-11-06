@@ -32,6 +32,9 @@ importers:
       react-router:
         specifier: ^8.5.1
         version: 8.5.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      smplr:
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@react-router/dev':
         specifier: ^8.5.1
@@ -2821,6 +2824,10 @@ packages:
   smob@1.6.2:
     resolution: {integrity: sha512-RQsvleCbF8cVHEv+xuDGaA4pOizFqJ0GgjtMSRo6oP8pnN7WsigHgVGey6aILRBKv4W2YOMHLqbKdnB6hpB9fw==}
     engines: {node: '>=20.0.0'}
+
+  smplr@1.1.0:
+    resolution: {integrity: sha512-VW2FeDdSgBU3cg9pofUYvXB1Nb0iMXurbAnUlpgWfOklw/3JGP5vEjKdq7qGaEwL8rzQTMjdDu64AqpR2ul1bQ==}
+    engines: {node: '>=14.0.0'}
 
   source-map-js@1.2.2:
     resolution: {integrity: sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==}
@@ -6113,6 +6120,8 @@ snapshots:
   signal-exit@4.1.0: {}
 
   smob@1.6.2: {}
+
+  smplr@1.1.0: {}
 
   source-map-js@1.2.2: {}
 

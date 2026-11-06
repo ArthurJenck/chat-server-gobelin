@@ -58,6 +58,7 @@ export default function Home() {
     return (
         <main>
             <h1>Gob Tchat</h1>
+            <p><Link to="/atelier-son">Atelier son</Link></p>
             {error && <p role="alert">{error}</p>}
             {account && (
                 <>
