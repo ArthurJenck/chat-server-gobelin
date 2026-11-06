@@ -211,6 +211,9 @@ export default function SoundSettingsPanel({
                     width: 400,
                     maxWidth: '100%',
                     opacity: 0.8,
+                    position: 'absolute',
+                    right: 8,
+                    top: 8,
                 }}
             >
                 <Leva fill />
