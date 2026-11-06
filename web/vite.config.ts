@@ -8,6 +8,7 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             injectRegister: false,
+            devOptions: { enabled: true },
             outDir: 'build/client',
             workbox: {
                 navigateFallback: null,

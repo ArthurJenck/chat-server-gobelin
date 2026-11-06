@@ -1,5 +1,8 @@
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '')
 const TOKEN_KEY = 'gobelin_token'
+
+function getApiUrl() {
+    return (import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:4000`).replace(/\/$/, '')
+}
 
 export type Channel = {
     id: number
@@ -42,7 +45,7 @@ async function apiFetch(path: string, options: RequestInit = {}, authenticated =
     const token = authenticated ? getToken() : null
     if (authenticated && !token) throw new ApiError(401)
 
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${getApiUrl()}${path}`, {
         ...options,
         headers: {
             ...(options.body ? { 'Content-Type': 'application/json' } : {}),
