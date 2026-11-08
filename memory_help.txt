@@ -13,6 +13,8 @@ curl -w "code:%{http_code}" -XPOST 0.0.0.0:4000/user/edit -H 'Namespace: space' 
 
 curl -XPOST 0.0.0.0:4000/channel -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImlzYWJlbGxlIiwiaWQiOjEsImV4cCI6MTc5Mzg2NDMyNX0.LPZ8d0GPf_PqpAQ0urcJAs6M0dE7QsdVrbOBcAiEAtA' -d '{"name":"goblin-tests"}'
 
+curl -XPOST 0.0.0.0:4000/channel -H 'Namespace: space' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImlzYWJlbGxlIiwiaWQiOjQsImV4cCI6MTc5NDQxMTA0MH0.jFobv5pN04zIpzsYPkGT_GuJ5lepPdvxtZSek9u4dzw' -d '{"name":"meta-tests", "metadata":[2,3,5,7,11]}'
+
 curl -XPOST 0.0.0.0:4000/channel/message?namespace=space -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImlzYWJlbGxlIiwiaWQiOjQsImV4cCI6MTc5NDQxMTA0MH0.jFobv5pN04zIpzsYPkGT_GuJ5lepPdvxtZSek9u4dzw' -d '{"content":"this is some kind of content", "metadata": [5,6],"channel":4}'
 
 
