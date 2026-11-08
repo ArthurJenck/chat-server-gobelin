@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"chat-gobelin-api/internal"
 	"chat-gobelin-api/internal/users"
@@ -26,6 +27,8 @@ type createMessageRequest struct {
 	Content string `json:"content" binding:"required"`
 	Channel int64 `json:"channel" binding:"required"`
 	Metadata *json.RawMessage `json:"metadata"`
+	Anonymous bool `json:"anonymous"`
+	PostedAt *time.Time `json:"posted_at"`
 }
 
 type editMessageRequest struct {
@@ -127,7 +130,7 @@ func (h messageHandler) CreateMessage(writer http.ResponseWriter, request *http.
 		}
 	}
 
-	message, err := h.messageRepo.Create(ctx, req.Content, meta, channel, *user)
+	message, err := h.messageRepo.Create(ctx, req.Content, meta, channel, *user, req.Anonymous, req.PostedAt)
 	if err != nil {
 		log.Printf("Error creating message: %s", err.Error())
 		writer.WriteHeader(http.StatusInternalServerError)

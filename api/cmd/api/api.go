@@ -87,7 +87,7 @@ func main() {
 			case <- ctx.Done():
 				return
 			case _ = <-ticker.C:
-				messageRepo.Create(ctx, fmt.Sprintf("clock tick : %s", time.Now().Format(time.UnixDate)), nil, *generalChannel, *internalUser)
+				messageRepo.Create(ctx, fmt.Sprintf("clock tick : %s", time.Now().Format(time.UnixDate)), nil, *generalChannel, *internalUser, true, nil)
 			}
 		}
 	}()
