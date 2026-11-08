@@ -2,6 +2,7 @@ package messages
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"chat-gobelin-api/internal/users"
@@ -12,7 +13,9 @@ import (
 
 type Repo interface {
 	GetByChannel(ctx context.Context, channel channels.Channel) ([]Message, error)
-	Create(ctx context.Context, content string, channel channels.Channel, user users.User) (*Message, error)
+	GetByID(ctx context.Context, id int64) (*Message, error)
+	Create(ctx context.Context, content string, rawMetadata json.RawMessage, channel channels.Channel, user users.User) (*Message, error)
+	Edit(ctx context.Context, message Message, content string, rawMetadata json.RawMessage) (*Message, error)
 }
 
 type repo struct {
@@ -32,11 +35,12 @@ func (r *repo) GetByChannel(ctx context.Context, channel channels.Channel) ([]Me
 			a.content,
 			a.user_id,
 			a.creation_date,
+			a.metadata,
 			b.username as user
 		FROM messages a
 		JOIN users b ON a.user_id = b.id
 		WHERE a.channel_id = ?
-		ORDER BY creation_date
+		ORDER BY creation_date DESC
 		LIMIT 100`
 
 	query = r.db.Rebind(query)
@@ -45,20 +49,119 @@ func (r *repo) GetByChannel(ctx context.Context, channel channels.Channel) ([]Me
 	if err != nil {
 		return messages, fmt.Errorf("Error retrieving channels: %w", err)
 	}
+
+	for i, message := range messages {
+		var metadata map[string]json.RawMessage
+		if len(message.RawMetadata) > 0 {
+			err = json.Unmarshal(message.RawMetadata, &metadata)
+			if err != nil {
+				return messages, fmt.Errorf("Error unmarshaling metadata: %w for %s", err, message.RawMetadata)
+			}
+		}
+		messages[i].Metadata = metadata
+	}
+
 	return messages, nil
 }
 
-func (r *repo) Create(ctx context.Context, content string, channel channels.Channel, user users.User) (*Message, error) {
+func (r *repo) GetByID(ctx context.Context, id int64) (*Message, error) {
+	query := `SELECT
+			a.id,
+			a.content,
+			a.user_id,
+			a.creation_date,
+			a.metadata,
+			b.username as user
+		FROM messages a
+		JOIN users b ON a.user_id = b.id
+		WHERE a.id = ?`
+
+	query = r.db.Rebind(query)
+	var message Message
+	err := r.db.GetContext(ctx, &message, query, id)
+	if err != nil {
+		return &message, fmt.Errorf("Error retrieving message by id: %w", err)
+	}
+
+	var metadata map[string]json.RawMessage
+	err = json.Unmarshal(message.RawMetadata, &metadata)
+	if err != nil {
+		return &message, fmt.Errorf("Error unmarshaling metadata: %w", err)
+	}
+	message.Metadata = metadata
+
+	return &message, nil
+}
+
+func (r *repo) Create(ctx context.Context, content string, rawMetadata json.RawMessage, channel channels.Channel, user users.User) (*Message, error) {
 	query := `INSERT INTO messages
-		(content, user_id, channel_id, creation_date) VALUES (?, ?, ?, NOW())
+		(content, metadata, user_id, channel_id, creation_date) VALUES (?, ?, ?, ?, NOW())
 		RETURNING id, content, user_id, creation_date`
 
 	query = r.db.Rebind(query)
 	var message Message
-	err := r.db.GetContext(ctx, &message, query, content, user.ID, channel.ID)
+	err := r.db.GetContext(ctx, &message, query, content, rawMetadata, user.ID, channel.ID)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating channel: %w", err)
 	}
 	message.User = user.Username
+	message.RawMetadata = rawMetadata
 	return &message, nil
+}
+
+func (r *repo) Edit(ctx context.Context, message Message, content string, rawMetadata json.RawMessage) (*Message, error) {
+
+	//Idempotent if nothing changed
+	if content == "" && rawMetadata == nil {
+		return &message, nil
+	}
+
+	var editedMessage Message
+
+	if content == "" {
+		query := `UPDATE messages SET
+			metadata = ?
+			WHERE id = ?
+			RETURNING id, content, metadata`
+		query = r.db.Rebind(query)
+		err := r.db.GetContext(ctx, &editedMessage, query, []byte(rawMetadata), message.ID)
+		if err != nil {
+			return nil, fmt.Errorf("Error updating message metadata: %w", err)
+		}
+	} else if rawMetadata == nil {
+		query := `UPDATE messages SET
+			content = ?
+			WHERE id = ?
+			RETURNING id, content, metadata`
+		query = r.db.Rebind(query)
+		err := r.db.GetContext(ctx, &editedMessage, query, content, message.ID)
+		if err != nil {
+			return nil, fmt.Errorf("Error updating message: %w", err)
+		}
+	} else {
+		query := `UPDATE messages SET
+			content = ?,
+			metadata = ?
+			WHERE id = ?
+			RETURNING id, content, metadata`
+		query = r.db.Rebind(query)
+		err := r.db.GetContext(ctx, &editedMessage, query, content, []byte(rawMetadata), message.ID)
+		if err != nil {
+			return nil, fmt.Errorf("Error updating message: %w", err)
+		}
+	}
+
+	if rawMetadata != nil {
+		var metadata map[string]json.RawMessage
+		err := json.Unmarshal(rawMetadata, &metadata)
+		if err != nil {
+			return nil, fmt.Errorf("Error unmarshaling edited metadata for user: %w", err)
+		}
+		editedMessage.Metadata = metadata
+	} else {
+		editedMessage.Metadata = message.Metadata
+	}
+	editedMessage.User = message.User
+
+	return &editedMessage, nil
 }
