@@ -12,6 +12,7 @@ type Repo interface {
 	GetByUserName(ctx context.Context, username string) (*User, error)
 	GetByID(ctx context.Context, id int64) (*User, error)
 	Create(ctx context.Context, name string, metadata json.RawMessage, passwordHash []byte) (*User, error)
+	EditMetadata(ctx context.Context, user User, rawMetadata json.RawMessage) (*User, error)
 }
 
 type repo struct {
@@ -53,7 +54,8 @@ func (r *repo) GetByUserName(ctx context.Context, username string) (*User, error
 func (r *repo) GetByID(ctx context.Context, id int64) (*User, error) {
 	query := `SELECT
 			id,
-			username
+			username,
+			metadata
 		FROM users
 		WHERE id = ?`
 
@@ -63,10 +65,19 @@ func (r *repo) GetByID(ctx context.Context, id int64) (*User, error) {
 	if err != nil {
 		return &user, fmt.Errorf("Error retrieving user by id: %w", err)
 	}
+
+	var metadata map[string]json.RawMessage
+	err = json.Unmarshal(user.RawMetadata, &metadata)
+	if err != nil {
+		return &user, fmt.Errorf("Error unmarshaling metadata: %w", err)
+	}
+	user.Metadata = metadata
+
 	return &user, nil
 }
 
 func (r *repo) Create(ctx context.Context, name string, rawMetadata json.RawMessage, passwordHash []byte) (*User, error) {
+
 	var metadata map[string]json.RawMessage
 	err := json.Unmarshal(rawMetadata, &metadata)
 	if err != nil {
@@ -82,6 +93,32 @@ func (r *repo) Create(ctx context.Context, name string, rawMetadata json.RawMess
 	if err != nil {
 		return nil, fmt.Errorf("Error creating user: %w", err)
 	}
+
 	user.Metadata = metadata
+
 	return &user, nil
+}
+
+func (r *repo) EditMetadata(ctx context.Context, user User, rawMetadata json.RawMessage) (*User, error) {
+
+	var metadata map[string]json.RawMessage
+	err := json.Unmarshal(rawMetadata, &metadata)
+	if err != nil {
+		return nil, fmt.Errorf("Error unmarshaling new metadata for user: %w", err)
+	}
+	query := `UPDATE users SET
+		metadata = ?
+		WHERE id = ?
+		RETURNING id, username, metadata`
+
+	query = r.db.Rebind(query)
+	var editedUser User
+	err = r.db.GetContext(ctx, &editedUser, query, []byte(rawMetadata), user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("Error creating user: %w", err)
+	}
+
+	editedUser.Metadata = metadata
+
+	return &editedUser, nil
 }

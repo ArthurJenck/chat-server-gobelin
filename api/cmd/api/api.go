@@ -87,7 +87,7 @@ func main() {
 			case <- ctx.Done():
 				return
 			case _ = <-ticker.C:
-				messageRepo.Create(ctx, fmt.Sprintf("clock tick : %s",time.Now().Format(time.UnixDate)), *generalChannel, *internalUser)
+				messageRepo.Create(ctx, fmt.Sprintf("clock tick : %s", time.Now().Format(time.UnixDate)), nil, *generalChannel, *internalUser)
 			}
 		}
 	}()
@@ -115,15 +115,18 @@ func main() {
 	router.Use(logRequests)
 	router.Use(setAccessControlHeader)
 	router.Use(amw.authMiddleware)
+	router.Use(namespace)
 
 	router.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
 	router.HandleFunc("/user", userHandler.Create).Methods(http.MethodPost)
+	router.HandleFunc("/user/edit", userHandler.Edit).Methods(http.MethodPost)
 	router.HandleFunc("/me", userHandler.Me).Methods(http.MethodGet)
 	/*router.HandleFunc("/channel", channelHandler.Get).Methods(http.MethodGet)*/
 	router.HandleFunc("/channel", channelHandler.Create).Methods(http.MethodPost)
 	router.HandleFunc("/channel/enter", channelHandler.EnterChannel).Methods(http.MethodPost)
 	router.HandleFunc("/channel/message", messageHandler.GetMessages).Methods(http.MethodGet)
 	router.HandleFunc("/channel/message", messageHandler.CreateMessage).Methods(http.MethodPost)
+	router.HandleFunc("/channel/message", messageHandler.EditMessage).Methods(http.MethodPut)
 	router.Methods(http.MethodOptions).HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 	}).Methods(http.MethodOptions)
@@ -184,6 +187,28 @@ func (amw *authenticationMiddleware) authMiddleware(next http.Handler) http.Hand
 			log.Printf("Error retrieving user: %s", err.Error())
 		}
 		ctx := context.WithValue(r.Context(), "user", currentUser)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func namespace(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		namespace := r.URL.Query().Get("namespace")
+
+		if namespace == "" {
+			namespace = r.Header.Get("Namespace")
+		}
+		log.Printf("Namespace on request: %s", namespace)
+		if namespace == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		ns := internal.HaveNamespace{
+			NameSpace: namespace,
+		}
+
+		ctx := context.WithValue(r.Context(), "namespace", &ns)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
