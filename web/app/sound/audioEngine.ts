@@ -1,4 +1,5 @@
 import { CacheStorage, Soundfont } from 'smplr'
+import { createArrangement } from './arrangement'
 import { INSTRUMENTS, type SoundSettings } from './soundConfig'
 import type { SoundPlan } from './soundPlan'
 
@@ -10,13 +11,8 @@ export async function startPlayback(
 ): Promise<() => void> {
     if (typeof window === 'undefined' || !window.AudioContext)
         throw new Error('Audio indisponible sur ce navigateur.')
-    const notes = [
-        ...new Set(
-            plan.events.flatMap((event) =>
-                event.midi === null ? [] : [event.midi]
-            )
-        ),
-    ]
+    const arrangement = createArrangement(plan, settings)
+    const notes = [...new Set(arrangement.map((event) => event.note))]
     if (notes.length === 0) {
         onFinished()
         return () => {}
@@ -79,35 +75,18 @@ export async function startPlayback(
     }
 
     const origin = context.currentTime + 0.04
-    let lastNoteIndex = -1
-    for (let index = 0; index < plan.events.length; index += 1) {
-        if (plan.events[index].midi !== null) lastNoteIndex = index
-    }
     let latestVoiceEnd = 0
     try {
-        for (let index = 0; index < plan.events.length; index += 1) {
-            const event = plan.events[index]
-            if (event.midi === null) continue
-            const isLastNote = index === lastNoteIndex
-            const nextStart = isLastNote
-                ? undefined
-                : plan.events[index + 1]?.start
-            const span = nextStart === undefined
-                ? plan.noteStep ?? settings.intervalMs / 1000
-                : Math.min(plan.noteStep ?? settings.intervalMs / 1000, Math.max(0.001, nextStart - event.start))
-            const active = Math.max(0.001, span * settings.gate)
-            const duration = isLastNote
-                ? Math.max(active, INSTRUMENTS[settings.instrument].lastDuration)
-                : active
+        for (const event of arrangement) {
             soundfont.start({
-                note: event.midi,
+                note: event.note,
                 time: origin + event.start,
-                duration,
-                velocity: 90,
+                duration: event.duration,
+                velocity: event.velocity,
             })
             latestVoiceEnd = Math.max(
                 latestVoiceEnd,
-                event.start + duration + 1.5
+                event.start + event.duration + 1.5
             )
         }
     } catch {

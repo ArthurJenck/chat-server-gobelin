@@ -41,6 +41,57 @@ export default function SoundSettingsPanel({
 
     const [values, set] = useControls(
         () => ({
+            Harmonie: folder({
+                chordPlacement: {
+                    value: initialSettings.chordPlacement,
+                    label: 'Accord début/fin',
+                    options: {
+                        Désactivé: 'off',
+                        'Au-dessus': 'above',
+                        'En dessous': 'below',
+                    },
+                },
+                Accord: folder(
+                    {
+                        chordQuality: {
+                            value: initialSettings.chordQuality,
+                            label: 'Composition',
+                            options: {
+                                'Dans la gamme': 'diatonic',
+                                'Toujours majeur/mineur': 'uniform',
+                            },
+                        },
+                        chordRhythm: {
+                            value: initialSettings.chordRhythm,
+                            label: 'Articulation',
+                            options: {
+                                'Attaque début/fin': 'accent',
+                                'Tenu jusqu’à la fin': 'sustain',
+                                'À chaque note': 'retrigger',
+                            },
+                        },
+                    },
+                    {
+                        render: (get) =>
+                            get('Harmonie.chordPlacement') !== 'off',
+                    }
+                ),
+                thirdPlacement: {
+                    value: initialSettings.thirdPlacement,
+                    label: 'Tierce par note',
+                    options: {
+                        Désactivée: 'off',
+                        'Au-dessus': 'above',
+                        'En dessous': 'below',
+                    },
+                },
+                harmonyVelocity: {
+                    ...number('harmonyVelocity', 'Force accompagnement'),
+                    render: (get) =>
+                        get('Harmonie.chordPlacement') !== 'off' ||
+                        get('Harmonie.thirdPlacement') !== 'off',
+                },
+            }),
             Découpage: folder({
                 segmentation: {
                     value: initialSettings.segmentation,
@@ -178,6 +229,7 @@ export default function SoundSettingsPanel({
                 restChance: number('restChance', 'Chance de pause'),
                 seed: number('seed', 'Seed'),
             }),
+
             Portée: folder({
                 Tracé: folder({
                     visualLineSpacing: number(

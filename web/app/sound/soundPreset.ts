@@ -35,12 +35,12 @@ export function saveInstrumentProfiles(profiles: Partial<Record<Instrument, Inst
 }
 
 export function serializePreset(settings: SoundSettings) {
-    return JSON.stringify({ version: 5, settings }, null, 2)
+    return JSON.stringify({ version: 6, settings }, null, 2)
 }
 
 export function parsePreset(value: string): SoundSettings {
     const parsed: unknown = JSON.parse(value)
-    if (!parsed || typeof parsed !== 'object' || !('version' in parsed) || ![1, 2, 3, 4, 5].includes(parsed.version as number)
+    if (!parsed || typeof parsed !== 'object' || !('version' in parsed) || ![1, 2, 3, 4, 5, 6].includes(parsed.version as number)
         || !('settings' in parsed) || !parsed.settings || typeof parsed.settings !== 'object') {
         throw new Error('Preset incompatible.')
     }
@@ -49,12 +49,12 @@ export function parsePreset(value: string): SoundSettings {
         throw new Error('Preset invalide.')
     }
     const migrated: Record<string, unknown> = {
-        ...Object.fromEntries(Object.entries(DEFAULT_SOUND_SETTINGS).filter(([key]) => key.startsWith('visual'))),
+        ...Object.fromEntries(Object.entries(DEFAULT_SOUND_SETTINGS).filter(([key]) => key.startsWith('visual') || ['chordPlacement', 'chordQuality', 'chordRhythm', 'thirdPlacement', 'harmonyVelocity'].includes(key))),
         ...saved,
         instrument: parsed.version === 1 ? 'piano' : saved.instrument,
         melodyMovement: saved.melodyMovement ?? DEFAULT_SOUND_SETTINGS.melodyMovement,
         maxDuration: typeof saved.maxDuration === 'number' ? Math.min(saved.maxDuration, 10) : saved.maxDuration,
-        wordGap: parsed.version === 4 || parsed.version === 5 ? saved.wordGap
+        wordGap: parsed.version === 4 || parsed.version === 5 || parsed.version === 6 ? saved.wordGap
             : typeof saved.wordGap === 'number' && saved.wordGap <= 3 ? Math.round(saved.wordGap * 300) : saved.wordGap,
     }
     const settings = Object.fromEntries(Object.keys(DEFAULT_SOUND_SETTINGS).map((key) => [key, migrated[key]]))
@@ -75,6 +75,10 @@ export function parsePreset(value: string): SoundSettings {
                 mode: ['major', 'minor'],
                 relation: ['relative', 'parallel'],
                 contour: ['arch', 'ascending', 'descending', 'random'],
+                chordPlacement: ['off', 'above', 'below'],
+                chordQuality: ['diatonic', 'uniform'],
+                chordRhythm: ['accent', 'sustain', 'retrigger'],
+                thirdPlacement: ['off', 'above', 'below'],
                 instrument: Object.keys(INSTRUMENTS),
                 visualEase: ['back.out(2)', 'elastic.out(1, 0.5)', 'bounce.out'],
             }

@@ -24,6 +24,12 @@ export function getScaleDegree(midi: number, tonic: number, mode: SoundSettings[
     return degree
 }
 
+export function getScalePitch(degree: number, tonic: number, mode: SoundSettings['mode']) {
+    const scale = mode === 'major' ? MAJOR_INTERVALS : MINOR_INTERVALS
+    const index = ((degree % scale.length) + scale.length) % scale.length
+    return tonic + Math.floor(degree / scale.length) * 12 + scale[index]
+}
+
 function randomFromSeed(seed: number) {
     let state = seed >>> 0
     return () => {

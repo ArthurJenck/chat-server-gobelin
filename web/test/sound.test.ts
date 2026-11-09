@@ -134,7 +134,7 @@ describe('sound workshop', () => {
 
     it('round trips a versioned settings preset', () => {
         const settings = { ...DEFAULT_SOUND_SETTINGS, instrument: 'trumpet' as const, maxWithinWordSemitones: 2, echoEnabled: true }
-        expect(JSON.parse(serializePreset(settings)).version).toBe(5)
+        expect(JSON.parse(serializePreset(settings)).version).toBe(6)
         expect(parsePreset(serializePreset(settings))).toEqual(settings)
         expect(parsePreset(serializePreset({ ...settings, instrument: 'flute' }))).toEqual({ ...settings, instrument: 'flute' })
         expect(() => parsePreset('{"version": 99}')).toThrow()
@@ -148,6 +148,13 @@ describe('sound workshop', () => {
         expect(parsePreset(JSON.stringify({ version: 5, settings: { ...DEFAULT_SOUND_SETTINGS, visualPitchStep: 12 } }))).toEqual(DEFAULT_SOUND_SETTINGS)
         const previousVisual = Object.fromEntries(Object.entries(DEFAULT_SOUND_SETTINGS).filter(([key]) => !['visualWordSpacing', 'visualDelayMs'].includes(key)))
         expect(parsePreset(JSON.stringify({ version: 5, settings: previousVisual }))).toEqual(DEFAULT_SOUND_SETTINGS)
+    })
+
+    it('adds harmony defaults when loading a preset from the previous version', () => {
+        const oldSettings = Object.fromEntries(Object.entries(DEFAULT_SOUND_SETTINGS).filter(([key]) =>
+            !['chordPlacement', 'chordQuality', 'chordRhythm', 'thirdPlacement', 'harmonyVelocity'].includes(key)
+        ))
+        expect(parsePreset(JSON.stringify({ version: 5, settings: oldSettings }))).toEqual(DEFAULT_SOUND_SETTINGS)
     })
 
     it('loads earlier synth presets as piano settings', () => {

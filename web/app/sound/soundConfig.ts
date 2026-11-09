@@ -124,6 +124,11 @@ export type SoundSettings = {
     melodyMovement: number
     restChance: number
     seed: number
+    chordPlacement: 'off' | 'above' | 'below'
+    chordQuality: 'diatonic' | 'uniform'
+    chordRhythm: 'accent' | 'sustain' | 'retrigger'
+    thirdPlacement: 'off' | 'above' | 'below'
+    harmonyVelocity: number
     instrument: Instrument
     gate: number
     filterFrequency: number
@@ -166,6 +171,11 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
     melodyMovement: 5,
     restChance: 0,
     seed: 1,
+    chordPlacement: 'off',
+    chordQuality: 'diatonic',
+    chordRhythm: 'accent',
+    thirdPlacement: 'off',
+    harmonyVelocity: 55,
     instrument: 'piano',
     gate: 0.7,
     filterFrequency: 12000,
@@ -207,6 +217,7 @@ export const SOUND_RANGES = {
     melodyMovement: { min: 0, max: 10, step: 1 },
     restChance: { min: 0, max: 0.8, step: 0.01 },
     seed: { min: 0, max: 999999, step: 1 },
+    harmonyVelocity: { min: 1, max: 100, step: 1 },
     gate: { min: 0.05, max: 1, step: 0.01 },
     filterFrequency: { min: 100, max: 12000, step: 50 },
     resonance: { min: 0.1, max: 20, step: 0.1 },
