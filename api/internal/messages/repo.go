@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"chat-gobelin-api/internal/users"
 	"chat-gobelin-api/internal/channels"
@@ -14,7 +15,7 @@ import (
 type Repo interface {
 	GetByChannel(ctx context.Context, channel channels.Channel) ([]Message, error)
 	GetByID(ctx context.Context, id int64) (*Message, error)
-	Create(ctx context.Context, content string, rawMetadata json.RawMessage, channel channels.Channel, user users.User) (*Message, error)
+	Create(ctx context.Context, content string, rawMetadata json.RawMessage, channel channels.Channel, user users.User, anonymous bool, createdAt *time.Time) (*Message, error)
 	Edit(ctx context.Context, message Message, content string, rawMetadata json.RawMessage) (*Message, error)
 }
 
@@ -36,11 +37,13 @@ func (r *repo) GetByChannel(ctx context.Context, channel channels.Channel) ([]Me
 			a.user_id,
 			a.creation_date,
 			a.metadata,
+			a.anonymous,
+			a.posted_at,
 			b.username as user
 		FROM messages a
 		JOIN users b ON a.user_id = b.id
-		WHERE a.channel_id = ?
-		ORDER BY creation_date DESC
+		WHERE a.channel_id = ? AND posted_at < NOW()
+		ORDER BY posted_at DESC
 		LIMIT 100`
 
 	query = r.db.Rebind(query)
@@ -51,6 +54,9 @@ func (r *repo) GetByChannel(ctx context.Context, channel channels.Channel) ([]Me
 	}
 
 	for i, message := range messages {
+		if message.Anonymous {
+			messages[i].User = "anonymous"
+		}
 		var metadata map[string]json.RawMessage
 		if len(message.RawMetadata) > 0 {
 			err = json.Unmarshal(message.RawMetadata, &metadata)
@@ -71,6 +77,8 @@ func (r *repo) GetByID(ctx context.Context, id int64) (*Message, error) {
 			a.user_id,
 			a.creation_date,
 			a.metadata,
+			a.anonymous,
+			a.posted_at,
 			b.username as user
 		FROM messages a
 		JOIN users b ON a.user_id = b.id
@@ -93,24 +101,38 @@ func (r *repo) GetByID(ctx context.Context, id int64) (*Message, error) {
 	return &message, nil
 }
 
-func (r *repo) Create(ctx context.Context, content string, rawMetadata json.RawMessage, channel channels.Channel, user users.User) (*Message, error) {
-	query := `INSERT INTO messages
-		(content, metadata, user_id, channel_id, creation_date) VALUES (?, ?, ?, ?, NOW())
-		RETURNING id, content, user_id, creation_date`
-
-	query = r.db.Rebind(query)
+func (r *repo) Create(ctx context.Context, content string, rawMetadata json.RawMessage, channel channels.Channel, user users.User, anonymous bool, createdAt *time.Time) (*Message, error) {
 	var message Message
-	err := r.db.GetContext(ctx, &message, query, content, rawMetadata, user.ID, channel.ID)
-	if err != nil {
-		return nil, fmt.Errorf("Error creating channel: %w", err)
+	if createdAt == nil {
+		query := `INSERT INTO messages
+			(content, metadata, user_id, channel_id, anonymous, posted_at, creation_date) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+			RETURNING id, content, user_id, anonymous, posted_at, creation_date`
+
+		query = r.db.Rebind(query)
+		err := r.db.GetContext(ctx, &message, query, content, rawMetadata, user.ID, channel.ID, anonymous)
+		if err != nil {
+			return nil, fmt.Errorf("Error creating channel: %w", err)
+		}
+	} else {
+		query := `INSERT INTO messages
+			(content, metadata, user_id, channel_id, anonymous, posted_at, creation_date) VALUES (?, ?, ?, ?, ?, ?, NOW())
+			RETURNING id, content, user_id, anonymous, posted_at, creation_date`
+
+		query = r.db.Rebind(query)
+		err := r.db.GetContext(ctx, &message, query, content, rawMetadata, user.ID, channel.ID, anonymous, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("Error creating channel: %w", err)
+		}
 	}
 	message.User = user.Username
+	if message.Anonymous {
+		message.User = "anonymous"
+	}
 	message.RawMetadata = rawMetadata
 	return &message, nil
 }
 
 func (r *repo) Edit(ctx context.Context, message Message, content string, rawMetadata json.RawMessage) (*Message, error) {
-
 	//Idempotent if nothing changed
 	if content == "" && rawMetadata == nil {
 		return &message, nil
