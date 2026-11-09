@@ -37,6 +37,8 @@ func (r *repo) GetByChannel(ctx context.Context, channel channels.Channel) ([]Me
 			a.user_id,
 			a.creation_date,
 			a.metadata,
+			a.anonymous,
+			a.posted_at,
 			b.username as user
 		FROM messages a
 		JOIN users b ON a.user_id = b.id
@@ -75,6 +77,8 @@ func (r *repo) GetByID(ctx context.Context, id int64) (*Message, error) {
 			a.user_id,
 			a.creation_date,
 			a.metadata,
+			a.anonymous,
+			a.posted_at,
 			b.username as user
 		FROM messages a
 		JOIN users b ON a.user_id = b.id
@@ -101,7 +105,7 @@ func (r *repo) Create(ctx context.Context, content string, rawMetadata json.RawM
 	var message Message
 	if createdAt == nil {
 		query := `INSERT INTO messages
-			(content, metadata, user_id, channel_id, anonymous, posted_at, created_at) VALUES (?, ?, ?, ?, NOW(), NOW())
+			(content, metadata, user_id, channel_id, anonymous, posted_at, creation_date) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
 			RETURNING id, content, user_id, anonymous, posted_at, creation_date`
 
 		query = r.db.Rebind(query)
@@ -111,7 +115,7 @@ func (r *repo) Create(ctx context.Context, content string, rawMetadata json.RawM
 		}
 	} else {
 		query := `INSERT INTO messages
-			(content, metadata, user_id, channel_id, anonymous, posted_at, created_at) VALUES (?, ?, ?, ?, ?, NOW())
+			(content, metadata, user_id, channel_id, anonymous, posted_at, creation_date) VALUES (?, ?, ?, ?, ?, ?, NOW())
 			RETURNING id, content, user_id, anonymous, posted_at, creation_date`
 
 		query = r.db.Rebind(query)
