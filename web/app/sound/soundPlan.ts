@@ -1,12 +1,28 @@
-import type { SoundSettings } from './soundConfig'
+import { INSTRUMENTS, INSTRUMENT_PROFILES, type SoundSettings } from './soundConfig'
 
 export type TextGroup = { text: string, wordId: number | null }
 export type SoundEvent = TextGroup & { start: number, midi: number | null }
-export type SoundPlan = { events: SoundEvent[], tonicMidi: number, density: number }
+export type SoundPlan = { events: SoundEvent[], tonicMidi: number, density: number, noteStep?: number }
+export const MELODY_RANGE_SEMITONES = 6
+const RHYTHM_TICK_MS = 60
+
+export function isWordBoundary(previous: TextGroup, current: TextGroup) {
+    return previous.wordId !== null && current.wordId !== null && previous.wordId !== current.wordId
+}
 
 const SYLLABLE_PATTERN = /[^aeiouy]*[aeiouy]+(?:[^aeiouy]*$|[^aeiouy](?=[^aeiouy]))?/gi
 const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11]
 const MINOR_INTERVALS = [0, 2, 3, 5, 7, 8, 10]
+
+export function getScaleDegree(midi: number, tonic: number, mode: SoundSettings['mode']) {
+    const scale = mode === 'major' ? MAJOR_INTERVALS : MINOR_INTERVALS
+    const direction = Math.sign(midi - tonic)
+    let degree = 0
+    for (let offset = direction; offset !== 0 && Math.abs(offset) <= Math.abs(midi - tonic); offset += direction) {
+        if (scale.includes(((offset % 12) + 12) % 12)) degree += direction
+    }
+    return degree
+}
 
 function randomFromSeed(seed: number) {
     let state = seed >>> 0
@@ -98,7 +114,7 @@ function contourTarget(progress: number, settings: SoundSettings, tonic: number,
         : settings.contour === 'descending' ? 1 - progress
             : settings.contour === 'random' ? random()
                 : 1 - Math.abs(2 * progress - 1)
-    return tonic - 6 + amount * 12
+    return tonic - MELODY_RANGE_SEMITONES + amount * MELODY_RANGE_SEMITONES * 2
 }
 
 function skeletonTargets(count: number, tonic: number, settings: SoundSettings, random: () => number) {
@@ -119,24 +135,31 @@ export function createSoundPlan(text: string, settings: SoundSettings): SoundPla
     if (groups.length === 0) return { events: [], tonicMidi, density: 0 }
 
     const scale = settings.mode === 'major' ? MAJOR_INTERVALS : MINOR_INTERVALS
-    const pitches = Array.from({ length: 13 }, (_, interval) => tonicMidi - 6 + interval)
-        .filter((pitch) => scale.includes(((pitch - tonicMidi) % 12 + 12) % 12))
+    const profile = INSTRUMENT_PROFILES[settings.instrument]
+    const rangeShift = (settings.octave - profile.octave) * 12
+    const pitches = Array.from({ length: MELODY_RANGE_SEMITONES * 2 + 1 }, (_, interval) => tonicMidi - MELODY_RANGE_SEMITONES + interval)
+        .filter((pitch) => scale.includes(((pitch - tonicMidi) % 12 + 12) % 12)
+            && pitch >= profile.minMidi + rangeShift && pitch <= profile.maxMidi + rangeShift)
     const random = randomFromSeed(textSeed(text, settings.seed))
     const skeleton = settings.algorithm === 'skeleton'
         ? skeletonTargets(groups.length, tonicMidi, settings, random) : []
-    const baseInterval = settings.intervalMs / 1000
+    const baseInterval = settings.intervalMs
         / (settings.speedMode === 'length' ? 1 + settings.lengthFactor * Math.log2(Math.max(1, groups.length)) : 1)
+    const noteTicks = Math.max(1, Math.round(baseInterval / RHYTHM_TICK_MS))
+    const wordTicks = Math.round(settings.wordGap / RHYTHM_TICK_MS)
     const gaps = groups.slice(1).map((group, index) => {
-        const betweenWords = group.wordId !== null && groups[index].wordId !== null && group.wordId !== groups[index].wordId
-        return baseInterval * (1 + (random() < settings.restChance ? 1 : 0))
-            + (betweenWords ? settings.wordGap / 1000 : 0)
+        const betweenWords = isWordBoundary(groups[index], group)
+        return noteTicks * (1 + (random() < settings.restChance ? 1 : 0))
+            + (betweenWords ? wordTicks : 0)
     })
-    const rawDuration = gaps.reduce((sum, gap) => sum + gap, 0)
-    const timeScale = settings.speedMode === 'fixed' && rawDuration > settings.maxDuration ? settings.maxDuration / rawDuration : 1
+    const rawTicks = gaps.reduce((sum, gap) => sum + gap, 0)
+    const finalHold = Math.max(INSTRUMENTS[settings.instrument].lastDuration, settings.intervalMs * settings.gate / 1000)
+    const onsetBudget = Math.max(0.1, settings.maxDuration - finalHold - 1.6)
+    const requiredScale = rawTicks * RHYTHM_TICK_MS / (onsetBudget * 1000)
+    const tickMs = RHYTHM_TICK_MS / 2 ** Math.max(0, Math.ceil(Math.log2(Math.max(1, requiredScale))))
     const starts = [0]
     for (const gap of gaps) {
-        const next = starts.at(-1)! + gap * timeScale
-        starts.push(settings.speedMode === 'fixed' ? Math.min(settings.maxDuration, next) : next)
+        starts.push(starts.at(-1)! + gap * tickMs / 1000)
     }
 
     const events: SoundEvent[] = []
@@ -170,6 +193,7 @@ export function createSoundPlan(text: string, settings: SoundSettings): SoundPla
         previousPitch = pitch
     }
 
-    const duration = starts.at(-1) || baseInterval
-    return { events, tonicMidi, density: events.length / Math.max(duration, 0.001) }
+    const noteStep = noteTicks * tickMs / 1000
+    const duration = starts.at(-1) || noteStep
+    return { events, tonicMidi, density: events.length / Math.max(duration, 0.001), noteStep }
 }

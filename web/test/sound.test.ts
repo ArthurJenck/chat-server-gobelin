@@ -1,9 +1,48 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SOUND_SETTINGS } from '../app/sound/soundConfig'
+import { DEFAULT_SOUND_SETTINGS, INSTRUMENTS, withInstrumentProfile } from '../app/sound/soundConfig'
 import { createSoundPlan, segmentText } from '../app/sound/soundPlan'
-import { parsePreset, serializePreset } from '../app/sound/soundPreset'
+import { parsePreset, readSavedInstrumentProfiles, saveInstrumentProfiles, serializePreset } from '../app/sound/soundPreset'
 
 describe('sound workshop', () => {
+    it('starts each instrument in its own register and articulation', () => {
+        expect(Object.keys(INSTRUMENTS)).not.toContain('drums')
+        expect(withInstrumentProfile(DEFAULT_SOUND_SETTINGS, 'flute')).toMatchObject({
+            instrument: 'flute', octave: 5, intervalMs: 480, wordGap: 120, gate: 0.9,
+        })
+        expect(withInstrumentProfile(DEFAULT_SOUND_SETTINGS, 'guitar')).toMatchObject({
+            instrument: 'guitar', octave: 4, intervalMs: 120, gate: 0.35,
+        })
+    })
+
+    it('keeps notes in the selected instrument register', () => {
+        const settings = withInstrumentProfile(DEFAULT_SOUND_SETTINGS, 'piccolo')
+        const plan = createSoundPlan('La musique traverse les nuages', settings)
+
+        expect(plan.events.every((event) => event.midi !== null && event.midi >= 72 && event.midi <= 100)).toBe(true)
+    })
+
+    it('places different instrument speeds on the same rhythmic grid', () => {
+        const text = 'La musique est belle aujourd’hui'
+        for (const instrument of ['guitar', 'piano', 'flute'] as const) {
+            const plan = createSoundPlan(text, withInstrumentProfile(DEFAULT_SOUND_SETTINGS, instrument))
+            expect(plan.events.every((event) => Math.abs(event.start * 1000 / 60 - Math.round(event.start * 1000 / 60)) < 0.000001)).toBe(true)
+        }
+    })
+
+    it('reserves time for the last note when shortening a long phrase', () => {
+        const settings = withInstrumentProfile(DEFAULT_SOUND_SETTINGS, 'flute')
+        const plan = createSoundPlan('la '.repeat(100), settings)
+
+        expect(plan.events.at(-1)!.start + INSTRUMENTS.flute.lastDuration + 1.6).toBeLessThanOrEqual(settings.maxDuration)
+    })
+
+    it('saves each instrument adjustment independently', () => {
+        saveInstrumentProfiles({ flute: { octave: 5, intervalMs: 420, wordGap: 180, gate: 0.85 } })
+
+        expect(readSavedInstrumentProfiles().flute).toEqual({ octave: 5, intervalMs: 420, wordGap: 180, gate: 0.85 })
+        expect(readSavedInstrumentProfiles().guitar).toBeUndefined()
+    })
+
     it('keeps every text group within the maximum onset duration', () => {
         const settings = { ...DEFAULT_SOUND_SETTINGS, segmentation: 'characters' as const, speedMode: 'fixed' as const, maxDuration: 4 }
         const plan = createSoundPlan('a'.repeat(200), settings)
@@ -31,8 +70,8 @@ describe('sound workshop', () => {
         const relative = createSoundPlan('bonjour', { ...DEFAULT_SOUND_SETTINGS, mode: 'minor', relation: 'relative' })
         const parallel = createSoundPlan('bonjour', { ...DEFAULT_SOUND_SETTINGS, mode: 'minor', relation: 'parallel' })
 
-        expect(relative.tonicMidi).toBe(57)
-        expect(parallel.tonicMidi).toBe(60)
+        expect(relative.tonicMidi).toBe(69)
+        expect(parallel.tonicMidi).toBe(72)
         expect(relative.events.every((event) => event.midi !== null)).toBe(true)
         expect(parallel.events.every((event) => event.midi !== null)).toBe(true)
     })
@@ -95,10 +134,20 @@ describe('sound workshop', () => {
 
     it('round trips a versioned settings preset', () => {
         const settings = { ...DEFAULT_SOUND_SETTINGS, instrument: 'trumpet' as const, maxWithinWordSemitones: 2, echoEnabled: true }
-        expect(JSON.parse(serializePreset(settings)).version).toBe(4)
+        expect(JSON.parse(serializePreset(settings)).version).toBe(5)
         expect(parsePreset(serializePreset(settings))).toEqual(settings)
+        expect(parsePreset(serializePreset({ ...settings, instrument: 'flute' }))).toEqual({ ...settings, instrument: 'flute' })
         expect(() => parsePreset('{"version": 99}')).toThrow()
-        expect(() => parsePreset(serializePreset({ ...settings, instrument: 'flute' as 'trumpet' }))).toThrow()
+        expect(() => parsePreset(serializePreset({ ...settings, instrument: 'unknown' as 'trumpet' }))).toThrow()
+    })
+
+    it('migrates visual settings into older presets', () => {
+        const settings = Object.fromEntries(Object.entries(DEFAULT_SOUND_SETTINGS).filter(([key]) => !key.startsWith('visual')))
+        const old = JSON.stringify({ version: 4, settings })
+        expect(parsePreset(old)).toEqual(DEFAULT_SOUND_SETTINGS)
+        expect(parsePreset(JSON.stringify({ version: 5, settings: { ...DEFAULT_SOUND_SETTINGS, visualPitchStep: 12 } }))).toEqual(DEFAULT_SOUND_SETTINGS)
+        const previousVisual = Object.fromEntries(Object.entries(DEFAULT_SOUND_SETTINGS).filter(([key]) => !['visualWordSpacing', 'visualDelayMs'].includes(key)))
+        expect(parsePreset(JSON.stringify({ version: 5, settings: previousVisual }))).toEqual(DEFAULT_SOUND_SETTINGS)
     })
 
     it('loads earlier synth presets as piano settings', () => {

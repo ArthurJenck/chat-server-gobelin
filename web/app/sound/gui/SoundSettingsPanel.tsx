@@ -4,14 +4,15 @@ import {
     DEFAULT_SOUND_SETTINGS,
     SOUND_RANGES,
     type SoundSettings,
-} from './soundConfig'
-import { parsePreset, serializePreset } from './soundPreset'
+} from '../soundConfig'
+import { parsePreset, serializePreset } from '../soundPreset'
 
 type Props = {
     initialSettings: SoundSettings
     density: number
     onChange: (settings: SoundSettings) => void
     onError: (message: string) => void
+    onReset: () => void
 }
 
 export default function SoundSettingsPanel({
@@ -19,12 +20,14 @@ export default function SoundSettingsPanel({
     density,
     onChange,
     onError,
+    onReset,
 }: Props) {
     const fileInput = useRef<HTMLInputElement>(null)
     const densityRef = useRef(density)
     const settingsRef = useRef(initialSettings)
     const baseSettingsRef = useRef(initialSettings)
     const setRef = useRef<(settings: SoundSettings) => void>(() => {})
+    const firstRender = useRef(true)
     densityRef.current = density
 
     const number = <Key extends keyof typeof SOUND_RANGES>(
@@ -175,6 +178,40 @@ export default function SoundSettingsPanel({
                 restChance: number('restChance', 'Chance de pause'),
                 seed: number('seed', 'Seed'),
             }),
+            Portée: folder({
+                Tracé: folder({
+                    visualLineSpacing: number(
+                        'visualLineSpacing',
+                        'Écart lignes'
+                    ),
+                    visualLineThickness: number(
+                        'visualLineThickness',
+                        'Épaisseur'
+                    ),
+                }),
+                Texte: folder({
+                    visualFontSize: number('visualFontSize', 'Taille'),
+                    visualSpacing: number('visualSpacing', 'Écart groupes'),
+                    visualWordSpacing: number(
+                        'visualWordSpacing',
+                        'Écart mots'
+                    ),
+                }),
+                Apparition: folder({
+                    visualRise: number('visualRise', 'Hauteur départ'),
+                    visualDuration: number('visualDuration', 'Durée (s)'),
+                    visualDelayMs: number('visualDelayMs', 'Retard texte (ms)'),
+                    visualEase: {
+                        value: initialSettings.visualEase,
+                        label: 'Rebond',
+                        options: {
+                            Souple: 'back.out(2)',
+                            Élastique: 'elastic.out(1, 0.5)',
+                            Bondissant: 'bounce.out',
+                        },
+                    },
+                }),
+            }),
             Son: folder(
                 {
                     filterFrequency: number('filterFrequency', 'Filtre (Hz)'),
@@ -214,9 +251,10 @@ export default function SoundSettingsPanel({
                     setTimeout(() => URL.revokeObjectURL(url), 0)
                 }),
                 'Importer JSON': button(() => fileInput.current?.click()),
-                Réinitialiser: button(() =>
+                Réinitialiser: button(() => {
                     setRef.current(DEFAULT_SOUND_SETTINGS)
-                ),
+                    onReset()
+                }),
             }),
         }),
         []
@@ -245,7 +283,14 @@ export default function SoundSettingsPanel({
         onChange(next)
     }
 
-    useEffect(() => onChange(settings), [settings, onChange])
+    useEffect(() => {
+        if (firstRender.current) {
+            firstRender.current = false
+            setRef.current(initialSettings)
+            return
+        }
+        onChange(settings)
+    }, [settings, onChange])
 
     async function importPreset(file: File | undefined) {
         if (!file) return
@@ -265,10 +310,9 @@ export default function SoundSettingsPanel({
                 style={{
                     width: 400,
                     maxWidth: '100%',
-                    opacity: 0.8,
+                    flex: '0 1 400px',
                     position: 'absolute',
-                    right: 8,
-                    top: 8,
+                    right: '8px',
                 }}
             >
                 <Leva fill />
