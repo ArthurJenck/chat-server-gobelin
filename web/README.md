@@ -16,14 +16,14 @@ staffConfig.ts → valeurs par défaut, limites et dimensions partagées
 
 Les fichiers de la portée se trouvent dans [`app/staff/`](app/staff/). Chaque composant React a son propre fichier en PascalCase ; les fonctions, le hook et la configuration sont dans des modules séparés.
 
-| Fichier | Responsabilité |
-| --- | --- |
-| [`app/routes/channel.tsx`](app/routes/channel.tsx) | Charge les messages, conserve les réglages courants et affiche une portée par message. |
-| [`app/staff/StaffSettingsPanel.tsx`](app/staff/StaffSettingsPanel.tsx) | Déclare les contrôles Leva et transmet leurs valeurs au channel. |
-| [`app/staff/MessageStaff.tsx`](app/staff/MessageStaff.tsx) | Crée le SVG et ses cinq éléments `<path>`. |
-| [`app/staff/staffGeometry.ts`](app/staff/staffGeometry.ts) | Calcule le chemin SVG d'une ligne à partir de son index et des réglages. |
-| [`app/staff/useStaffAnimation.ts`](app/staff/useStaffAnimation.ts) | Anime les réglages avec GSAP et met à jour les tracés pendant la transition. |
-| [`app/staff/staffConfig.ts`](app/staff/staffConfig.ts) | Regroupe le type des réglages, leurs valeurs par défaut, leurs limites, les dimensions et la durée d'animation. |
+| Fichier                                                                | Responsabilité                                                                                                  |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| [`app/routes/channel.tsx`](app/routes/channel.tsx)                     | Charge les messages, conserve les réglages courants et affiche une portée par message.                          |
+| [`app/staff/StaffSettingsPanel.tsx`](app/staff/StaffSettingsPanel.tsx) | Déclare les contrôles Leva et transmet leurs valeurs au channel.                                                |
+| [`app/staff/MessageStaff.tsx`](app/staff/MessageStaff.tsx)             | Crée le SVG et ses cinq éléments `<path>`.                                                                      |
+| [`app/staff/staffGeometry.ts`](app/staff/staffGeometry.ts)             | Calcule le chemin SVG d'une ligne à partir de son index et des réglages.                                        |
+| [`app/staff/useStaffAnimation.ts`](app/staff/useStaffAnimation.ts)     | Anime les réglages avec GSAP et met à jour les tracés pendant la transition.                                    |
+| [`app/staff/staffConfig.ts`](app/staff/staffConfig.ts)                 | Regroupe le type des réglages, leurs valeurs par défaut, leurs limites, les dimensions et la durée d'animation. |
 
 ## Trajet d'un réglage
 
@@ -43,9 +43,8 @@ Les valeurs par défaut et les bornes du panneau viennent de `staffConfig.ts`. A
 `staffGeometry.ts` calcule la hauteur de chaque ligne autour du centre de la portée. La courbure déplace ensuite les points de contrôle de la courbe ; les cinq lignes utilisent le même calcul.
 
 ```ts
-const middleLine = (STAFF_GEOMETRY.lineCount - 1) / 2
-const y = STAFF_GEOMETRY.height / 2
-    + (index - middleLine) * settings.spacing
+const middleLine = (STAFF_GEOMETRY.lineCount - 1) / 2;
+const y = STAFF_GEOMETRY.height / 2 + (index - middleLine) * settings.spacing;
 ```
 
 `MessageStaff` fournit les cinq `<path>` et leurs références au hook. GSAP interpole un objet de valeurs numériques ; à chaque mise à jour, le hook recalcule l'attribut `d` des lignes avec `getStaffLinePath` et ajuste leur épaisseur :
@@ -56,10 +55,13 @@ gsap.to(currentSettings.current, {
     duration: STAFF_ANIMATION.duration,
     onUpdate: () => {
         paths.current.forEach((path, index) => {
-            path?.setAttribute('d', getStaffLinePath(index, currentSettings.current))
-        })
+            path?.setAttribute(
+                "d",
+                getStaffLinePath(index, currentSettings.current),
+            );
+        });
     },
-})
+});
 ```
 
 Le hook arrête la transition précédente quand les réglages changent ou que la portée disparaît. Les images intermédiaires sont appliquées directement au SVG, sans déclencher un rendu React à chaque image.

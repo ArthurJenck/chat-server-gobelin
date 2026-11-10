@@ -1,167 +1,383 @@
 export const INSTRUMENTS = {
     piano: {
-        label: 'Piano',
-        soundfont: 'acoustic_grand_piano',
+        label: "Piano",
+        soundfont: "acoustic_grand_piano",
         lastDuration: 1.2,
     },
     guitar: {
-        label: 'Guitare',
-        soundfont: 'acoustic_guitar_nylon',
+        label: "Guitare",
+        soundfont: "acoustic_guitar_nylon",
         lastDuration: 0.8,
     },
-    trumpet: { label: 'Trompette', soundfont: 'trumpet', lastDuration: 0.9 },
-    flute: { label: 'Flûte', soundfont: 'flute', lastDuration: 0.9 },
-    piccolo: { label: 'Piccolo', soundfont: 'piccolo', lastDuration: 0.9 },
-    oboe: { label: 'Hautbois', soundfont: 'oboe', lastDuration: 0.9 },
-    bassoon: { label: 'Basson', soundfont: 'bassoon', lastDuration: 0.9 },
-    horn: { label: 'Cor', soundfont: 'french_horn', lastDuration: 0.9 },
-    clarinet: { label: 'Clarinette', soundfont: 'clarinet', lastDuration: 0.9 },
-    violin: { label: 'Violon', soundfont: 'violin', lastDuration: 0.9 },
+    trumpet: { label: "Trompette", soundfont: "trumpet", lastDuration: 0.9 },
+    flute: { label: "Flûte", soundfont: "flute", lastDuration: 0.9 },
+    piccolo: { label: "Piccolo", soundfont: "piccolo", lastDuration: 0.9 },
+    oboe: { label: "Hautbois", soundfont: "oboe", lastDuration: 0.9 },
+    bassoon: { label: "Basson", soundfont: "bassoon", lastDuration: 0.9 },
+    horn: { label: "Cor", soundfont: "french_horn", lastDuration: 0.9 },
+    clarinet: { label: "Clarinette", soundfont: "clarinet", lastDuration: 0.9 },
+    violin: { label: "Violon", soundfont: "violin", lastDuration: 0.9 },
     contrabass: {
-        label: 'Contrebasse',
-        soundfont: 'contrabass',
+        label: "Contrebasse",
+        soundfont: "contrabass",
         lastDuration: 0.9,
     },
-    cello: { label: 'Violoncelle', soundfont: 'cello', lastDuration: 0.9 },
-    sax: { label: 'Saxophone', soundfont: 'soprano_sax', lastDuration: 0.9 },
-    trombone: { label: 'Trombone', soundfont: 'trombone', lastDuration: 0.9 },
-    tuba: { label: 'Tuba', soundfont: 'tuba', lastDuration: 0.9 },
+    cello: { label: "Violoncelle", soundfont: "cello", lastDuration: 0.9 },
+    sax: { label: "Saxophone", soundfont: "soprano_sax", lastDuration: 0.9 },
+    trombone: { label: "Trombone", soundfont: "trombone", lastDuration: 0.9 },
+    tuba: { label: "Tuba", soundfont: "tuba", lastDuration: 0.9 },
     accordion: {
-        label: 'Accordéon',
-        soundfont: 'accordion',
+        label: "Accordéon",
+        soundfont: "accordion",
         lastDuration: 0.9,
     },
-    bagpipe: { label: 'Cornemuse', soundfont: 'bagpipe', lastDuration: 0.9 },
-    ocarina: { label: 'Ocarina', soundfont: 'ocarina', lastDuration: 0.9 },
+    bagpipe: { label: "Cornemuse", soundfont: "bagpipe", lastDuration: 0.9 },
+    ocarina: { label: "Ocarina", soundfont: "ocarina", lastDuration: 0.9 },
     xylophone: {
-        label: 'Xylophone',
-        soundfont: 'xylophone',
+        label: "Xylophone",
+        soundfont: "xylophone",
         lastDuration: 0.9,
     },
     pan_flute: {
-        label: 'Flûte de Pan',
-        soundfont: 'pan_flute',
+        label: "Flûte de Pan",
+        soundfont: "pan_flute",
         lastDuration: 0.9,
     },
     electric_guitar: {
-        label: 'Guitare électrique',
-        soundfont: 'electric_guitar_clean',
+        label: "Guitare électrique",
+        soundfont: "electric_guitar_clean",
         lastDuration: 0.9,
     },
     bass: {
-        label: 'Basse électrique',
-        soundfont: 'electric_bass_finger',
+        label: "Basse électrique",
+        soundfont: "electric_bass_finger",
         lastDuration: 0.9,
     },
-    organ: { label: 'Orgue', soundfont: 'church_organ', lastDuration: 0.9 },
+    organ: { label: "Orgue", soundfont: "church_organ", lastDuration: 0.9 },
     harpsichord: {
-        label: 'Clavecin',
-        soundfont: 'harpsichord',
+        label: "Clavecin",
+        soundfont: "harpsichord",
         lastDuration: 0.9,
     },
-    harp: { label: 'Harpe', soundfont: 'orchestral_harp', lastDuration: 0.9 },
+    harp: { label: "Harpe", soundfont: "orchestral_harp", lastDuration: 0.9 },
     harmonica: {
-        label: 'Harmonica',
-        soundfont: 'harmonica',
+        label: "Harmonica",
+        soundfont: "harmonica",
         lastDuration: 0.9,
     },
-    banjo: { label: 'Banjo', soundfont: 'banjo', lastDuration: 0.9 },
-    koto: { label: 'Koto', soundfont: 'koto', lastDuration: 0.9 },
-    voice: { label: 'Voix', soundfont: 'voice_oohs', lastDuration: 0.9 },
-} as const
+    banjo: { label: "Banjo", soundfont: "banjo", lastDuration: 0.9 },
+    koto: { label: "Koto", soundfont: "koto", lastDuration: 0.9 },
+    voice: { label: "Voix", soundfont: "voice_oohs", lastDuration: 0.9 },
+} as const;
 
-export type Instrument = keyof typeof INSTRUMENTS
+export type Instrument = keyof typeof INSTRUMENTS;
 
-export const INSTRUMENT_PROFILES: Record<Instrument, { octave: number, intervalMs: number, wordGap: number, gate: number, minMidi: number, maxMidi: number }> = {
-    piano: { octave: 5, intervalMs: 240, wordGap: 120, gate: 0.7, minMidi: 48, maxMidi: 88 },
-    guitar: { octave: 4, intervalMs: 120, wordGap: 120, gate: 0.35, minMidi: 45, maxMidi: 76 },
-    trumpet: { octave: 4, intervalMs: 240, wordGap: 120, gate: 0.8, minMidi: 55, maxMidi: 78 },
-    flute: { octave: 5, intervalMs: 480, wordGap: 120, gate: 0.9, minMidi: 60, maxMidi: 88 },
-    piccolo: { octave: 6, intervalMs: 240, wordGap: 120, gate: 0.85, minMidi: 72, maxMidi: 100 },
-    oboe: { octave: 5, intervalMs: 480, wordGap: 120, gate: 0.9, minMidi: 58, maxMidi: 84 },
-    bassoon: { octave: 3, intervalMs: 480, wordGap: 120, gate: 0.9, minMidi: 36, maxMidi: 68 },
-    horn: { octave: 4, intervalMs: 480, wordGap: 120, gate: 0.9, minMidi: 48, maxMidi: 77 },
-    clarinet: { octave: 4, intervalMs: 480, wordGap: 120, gate: 0.9, minMidi: 50, maxMidi: 82 },
-    violin: { octave: 5, intervalMs: 240, wordGap: 120, gate: 0.85, minMidi: 55, maxMidi: 88 },
-    contrabass: { octave: 2, intervalMs: 480, wordGap: 120, gate: 0.75, minMidi: 28, maxMidi: 58 },
-    cello: { octave: 3, intervalMs: 480, wordGap: 120, gate: 0.85, minMidi: 36, maxMidi: 72 },
-    sax: { octave: 4, intervalMs: 240, wordGap: 120, gate: 0.85, minMidi: 58, maxMidi: 83 },
-    trombone: { octave: 3, intervalMs: 480, wordGap: 120, gate: 0.85, minMidi: 40, maxMidi: 72 },
-    tuba: { octave: 2, intervalMs: 480, wordGap: 120, gate: 0.85, minMidi: 28, maxMidi: 60 },
-    accordion: { octave: 4, intervalMs: 240, wordGap: 120, gate: 0.85, minMidi: 48, maxMidi: 82 },
-    bagpipe: { octave: 5, intervalMs: 480, wordGap: 120, gate: 0.95, minMidi: 65, maxMidi: 81 },
-    ocarina: { octave: 5, intervalMs: 240, wordGap: 120, gate: 0.9, minMidi: 60, maxMidi: 84 },
-    xylophone: { octave: 5, intervalMs: 120, wordGap: 120, gate: 0.3, minMidi: 60, maxMidi: 88 },
-    pan_flute: { octave: 5, intervalMs: 480, wordGap: 120, gate: 0.9, minMidi: 60, maxMidi: 88 },
-    electric_guitar: { octave: 4, intervalMs: 240, wordGap: 120, gate: 0.5, minMidi: 45, maxMidi: 78 },
-    bass: { octave: 2, intervalMs: 240, wordGap: 120, gate: 0.6, minMidi: 28, maxMidi: 60 },
-    organ: { octave: 4, intervalMs: 480, wordGap: 120, gate: 0.95, minMidi: 36, maxMidi: 84 },
-    harpsichord: { octave: 4, intervalMs: 240, wordGap: 120, gate: 0.45, minMidi: 48, maxMidi: 84 },
-    harp: { octave: 4, intervalMs: 240, wordGap: 120, gate: 0.6, minMidi: 48, maxMidi: 84 },
-    harmonica: { octave: 4, intervalMs: 240, wordGap: 120, gate: 0.85, minMidi: 55, maxMidi: 82 },
-    banjo: { octave: 4, intervalMs: 120, wordGap: 120, gate: 0.35, minMidi: 50, maxMidi: 79 },
-    koto: { octave: 4, intervalMs: 240, wordGap: 120, gate: 0.5, minMidi: 48, maxMidi: 84 },
-    voice: { octave: 4, intervalMs: 480, wordGap: 120, gate: 0.9, minMidi: 48, maxMidi: 77 },
-}
+export const INSTRUMENT_PROFILES: Record<
+    Instrument,
+    {
+        octave: number;
+        intervalMs: number;
+        wordGap: number;
+        gate: number;
+        minMidi: number;
+        maxMidi: number;
+    }
+> = {
+    piano: {
+        octave: 5,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.7,
+        minMidi: 48,
+        maxMidi: 88,
+    },
+    guitar: {
+        octave: 4,
+        intervalMs: 120,
+        wordGap: 120,
+        gate: 0.35,
+        minMidi: 45,
+        maxMidi: 76,
+    },
+    trumpet: {
+        octave: 4,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.8,
+        minMidi: 55,
+        maxMidi: 78,
+    },
+    flute: {
+        octave: 5,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.9,
+        minMidi: 60,
+        maxMidi: 88,
+    },
+    piccolo: {
+        octave: 6,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.85,
+        minMidi: 72,
+        maxMidi: 100,
+    },
+    oboe: {
+        octave: 5,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.9,
+        minMidi: 58,
+        maxMidi: 84,
+    },
+    bassoon: {
+        octave: 3,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.9,
+        minMidi: 36,
+        maxMidi: 68,
+    },
+    horn: {
+        octave: 4,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.9,
+        minMidi: 48,
+        maxMidi: 77,
+    },
+    clarinet: {
+        octave: 4,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.9,
+        minMidi: 50,
+        maxMidi: 82,
+    },
+    violin: {
+        octave: 5,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.85,
+        minMidi: 55,
+        maxMidi: 88,
+    },
+    contrabass: {
+        octave: 2,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.75,
+        minMidi: 28,
+        maxMidi: 58,
+    },
+    cello: {
+        octave: 3,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.85,
+        minMidi: 36,
+        maxMidi: 72,
+    },
+    sax: {
+        octave: 4,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.85,
+        minMidi: 58,
+        maxMidi: 83,
+    },
+    trombone: {
+        octave: 3,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.85,
+        minMidi: 40,
+        maxMidi: 72,
+    },
+    tuba: {
+        octave: 2,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.85,
+        minMidi: 28,
+        maxMidi: 60,
+    },
+    accordion: {
+        octave: 4,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.85,
+        minMidi: 48,
+        maxMidi: 82,
+    },
+    bagpipe: {
+        octave: 5,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.95,
+        minMidi: 65,
+        maxMidi: 81,
+    },
+    ocarina: {
+        octave: 5,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.9,
+        minMidi: 60,
+        maxMidi: 84,
+    },
+    xylophone: {
+        octave: 5,
+        intervalMs: 120,
+        wordGap: 120,
+        gate: 0.3,
+        minMidi: 60,
+        maxMidi: 88,
+    },
+    pan_flute: {
+        octave: 5,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.9,
+        minMidi: 60,
+        maxMidi: 88,
+    },
+    electric_guitar: {
+        octave: 4,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.5,
+        minMidi: 45,
+        maxMidi: 78,
+    },
+    bass: {
+        octave: 2,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.6,
+        minMidi: 28,
+        maxMidi: 60,
+    },
+    organ: {
+        octave: 4,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.95,
+        minMidi: 36,
+        maxMidi: 84,
+    },
+    harpsichord: {
+        octave: 4,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.45,
+        minMidi: 48,
+        maxMidi: 84,
+    },
+    harp: {
+        octave: 4,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.6,
+        minMidi: 48,
+        maxMidi: 84,
+    },
+    harmonica: {
+        octave: 4,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.85,
+        minMidi: 55,
+        maxMidi: 82,
+    },
+    banjo: {
+        octave: 4,
+        intervalMs: 120,
+        wordGap: 120,
+        gate: 0.35,
+        minMidi: 50,
+        maxMidi: 79,
+    },
+    koto: {
+        octave: 4,
+        intervalMs: 240,
+        wordGap: 120,
+        gate: 0.5,
+        minMidi: 48,
+        maxMidi: 84,
+    },
+    voice: {
+        octave: 4,
+        intervalMs: 480,
+        wordGap: 120,
+        gate: 0.9,
+        minMidi: 48,
+        maxMidi: 77,
+    },
+};
 
 export type SoundSettings = {
-    speedMode: 'fixed' | 'length'
-    intervalMs: number
-    lengthFactor: number
-    maxDuration: number
-    wordGap: number
-    mode: 'major' | 'minor'
-    root: number
-    octave: number
-    degreeA: number
-    degreeE: number
-    degreeI: number
-    degreeO: number
-    degreeU: number
-    degreeOU: number
-    degreeIN: number
-    soundWeight: number
-    chordWeight: number
-    directionWeight: number
-    repetitionWeight: number
-    repeatPenalty: number
-    leapPenalty: number
-    resolutionWeight: number
-    cadenceWeight: number
-    variationWeight: number
-    chordPlacement: 'off' | 'above' | 'below'
-    chordRhythm: 'accent' | 'sustain' | 'retrigger'
-    thirdPlacement: 'off' | 'above' | 'below'
-    harmonyVelocity: number
-    instrument: Instrument
-    gate: number
-    filterFrequency: number
-    resonance: number
-    volume: number
-    echoEnabled: boolean
-    echoDelay: number
-    echoFeedback: number
-    echoMix: number
-    visualSpacing: number
-    visualWordSpacing: number
-    visualLineSpacing: number
-    visualLineThickness: number
-    visualFontSize: number
-    visualRise: number
-    visualDuration: number
-    visualDelayMs: number
-    visualEase: 'back.out(2)' | 'elastic.out(1, 0.5)' | 'bounce.out'
-}
+    speedMode: "fixed" | "length";
+    intervalMs: number;
+    lengthFactor: number;
+    maxDuration: number;
+    wordGap: number;
+    mode: "major" | "minor";
+    root: number;
+    octave: number;
+    degreeA: number;
+    degreeE: number;
+    degreeI: number;
+    degreeO: number;
+    degreeU: number;
+    degreeOU: number;
+    degreeIN: number;
+    soundWeight: number;
+    chordWeight: number;
+    directionWeight: number;
+    repetitionWeight: number;
+    repeatPenalty: number;
+    leapPenalty: number;
+    resolutionWeight: number;
+    cadenceWeight: number;
+    variationWeight: number;
+    chordPlacement: "off" | "above" | "below";
+    chordRhythm: "accent" | "sustain" | "retrigger";
+    thirdPlacement: "off" | "above" | "below";
+    harmonyVelocity: number;
+    instrument: Instrument;
+    gate: number;
+    filterFrequency: number;
+    resonance: number;
+    volume: number;
+    echoEnabled: boolean;
+    echoDelay: number;
+    echoFeedback: number;
+    echoMix: number;
+    visualSpacing: number;
+    visualWordSpacing: number;
+    visualLineSpacing: number;
+    visualLineThickness: number;
+    visualFontSize: number;
+    visualRise: number;
+    visualDuration: number;
+    visualDelayMs: number;
+    visualEase: "back.out(2)" | "elastic.out(1, 0.5)" | "bounce.out";
+};
 
-export type InstrumentProfileSettings = Pick<SoundSettings, 'octave' | 'intervalMs' | 'wordGap' | 'gate'>
+export type InstrumentProfileSettings = Pick<
+    SoundSettings,
+    "octave" | "intervalMs" | "wordGap" | "gate"
+>;
 
 export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
-    speedMode: 'length',
+    speedMode: "length",
     intervalMs: 240,
     lengthFactor: 0.4,
     maxDuration: 10,
     wordGap: 120,
-    mode: 'major',
+    mode: "major",
     root: 0,
     octave: 5,
     degreeA: 0,
@@ -180,11 +396,11 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
     resolutionWeight: 5,
     cadenceWeight: 8,
     variationWeight: 1,
-    chordPlacement: 'off',
-    chordRhythm: 'accent',
-    thirdPlacement: 'off',
+    chordPlacement: "off",
+    chordRhythm: "accent",
+    thirdPlacement: "off",
     harmonyVelocity: 55,
-    instrument: 'piano',
+    instrument: "piano",
     gate: 0.7,
     filterFrequency: 12000,
     resonance: 0.7,
@@ -201,17 +417,24 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
     visualRise: 80,
     visualDuration: 0.6,
     visualDelayMs: 0,
-    visualEase: 'elastic.out(1, 0.5)',
+    visualEase: "elastic.out(1, 0.5)",
+};
+
+export function instrumentProfileSettings(
+    settings: SoundSettings,
+): InstrumentProfileSettings {
+    const { octave, intervalMs, wordGap, gate } = settings;
+    return { octave, intervalMs, wordGap, gate };
 }
 
-export function instrumentProfileSettings(settings: SoundSettings): InstrumentProfileSettings {
-    const { octave, intervalMs, wordGap, gate } = settings
-    return { octave, intervalMs, wordGap, gate }
-}
-
-export function withInstrumentProfile(settings: SoundSettings, instrument: Instrument, saved?: InstrumentProfileSettings): SoundSettings {
-    const { octave, intervalMs, wordGap, gate } = saved ?? INSTRUMENT_PROFILES[instrument]
-    return { ...settings, instrument, octave, intervalMs, wordGap, gate }
+export function withInstrumentProfile(
+    settings: SoundSettings,
+    instrument: Instrument,
+    saved?: InstrumentProfileSettings,
+): SoundSettings {
+    const { octave, intervalMs, wordGap, gate } =
+        saved ?? INSTRUMENT_PROFILES[instrument];
+    return { ...settings, instrument, octave, intervalMs, wordGap, gate };
 }
 
 export const SOUND_RANGES = {
@@ -252,4 +475,4 @@ export const SOUND_RANGES = {
     visualRise: { min: 4, max: 100, step: 1 },
     visualDuration: { min: 0.1, max: 2, step: 0.05 },
     visualDelayMs: { min: 0, max: 300, step: 5 },
-} as const
+} as const;

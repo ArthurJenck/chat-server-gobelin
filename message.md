@@ -1,12 +1,15 @@
 # Message API
+
 The API exposes two endpoints:
 
 ## Create Message
+
 POST **/channel/message**
 
 Create a new channel
 
 Take a request of the form :
+
 ```
 {
   "content":"this is some kind of content",
@@ -26,6 +29,7 @@ If successful, return:
 ```
 
 ## Get Message
+
 GET **/channel/message**
 
 Receive messages from a channel

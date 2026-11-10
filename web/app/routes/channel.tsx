@@ -1,121 +1,180 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
-import { ApiError, getAccount, getMessages, getToken, sendMessage, type Message } from '../api'
-import MessageStaff from '../staff/MessageStaff'
-import StaffSettingsPanel from '../staff/StaffSettingsPanel'
-import { DEFAULT_STAFF_SETTINGS } from '../staff/staffConfig'
+import { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import { ApiError, getMessages, sendMessage, type Message } from "../api";
+import KeyControl from "../components/KeyControl";
+import MessageItem from "../components/MessageItem";
+import PageHeader from "../components/PageHeader";
+import { KEY_CHANNEL_NAME, MESSAGE_REFRESH_MS, PATHS } from "../config";
+import {
+    ensureKeyChannel,
+    readKeyState,
+    toggleKeyState,
+    type KeyState,
+} from "../managers/key";
+import { accountInstrument } from "../managers/profile";
+import { useAccount } from "../managers/useAccount";
+
+const AVAILABLE_KEY: KeyState = { holderId: null, holderName: null };
 
 export default function ChannelPage() {
-    const { channelId } = useParams()
-    const id = Number(channelId)
-    const navigate = useNavigate()
-    const [channelName, setChannelName] = useState('')
-    const [messages, setMessages] = useState<Message[]>([])
-    const [content, setContent] = useState('')
-    const [loading, setLoading] = useState(true)
-    const [busy, setBusy] = useState(false)
-    const [error, setError] = useState('')
-    const [staffSettings, setStaffSettings] = useState(DEFAULT_STAFF_SETTINGS)
+    const { channelId } = useParams();
+    const id = Number(channelId);
+    const navigate = useNavigate();
+    const {
+        account,
+        loading: accountLoading,
+        error: accountError,
+    } = useAccount();
+    const channel = account?.channels?.find(
+        (item) => item.id === id && item.name !== KEY_CHANNEL_NAME,
+    );
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [keyChannelId, setKeyChannelId] = useState<number | null>(null);
+    const [keyState, setKeyState] = useState<KeyState>(AVAILABLE_KEY);
+    const [content, setContent] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [keyBusy, setKeyBusy] = useState(false);
+    const [error, setError] = useState("");
 
-    function handleError(cause: unknown) {
-        if (cause instanceof ApiError && cause.status === 401) {
-            void navigate('/login', { replace: true })
-        } else {
-            setError(cause instanceof Error ? cause.message : 'Impossible de charger les messages.')
-        }
+    function handleError(cause: unknown, fallback: string) {
+        if (cause instanceof ApiError && cause.status === 401)
+            void navigate(PATHS.login, { replace: true });
+        else setError(cause instanceof Error ? cause.message : fallback);
     }
 
-    async function refreshMessages() {
-        setMessages(await getMessages(id))
-        setError('')
-    }
+    const refresh = useCallback(
+        async (technicalId: number) => {
+            const [nextMessages, nextKey] = await Promise.all([
+                getMessages(id),
+                readKeyState(technicalId),
+            ]);
+            setMessages(nextMessages);
+            setKeyState(nextKey);
+        },
+        [id],
+    );
 
     useEffect(() => {
-        if (!getToken()) {
-            void navigate('/login', { replace: true })
-            return
-        }
-        if (!Number.isSafeInteger(id) || id <= 0) {
-            setError('Channel invalide.')
-            setLoading(false)
-            return
-        }
-
-        let active = true
-        let timer: ReturnType<typeof setInterval> | undefined
-
-        getAccount()
-            .then(async (account) => {
-                if (!active) return
-                const channel = account.channels?.find((item) => item.id === id)
-                if (!channel) {
-                    setError('Ce channel ne fait pas partie de votre compte.')
-                    return
-                }
-                setChannelName(channel.name)
-                await refreshMessages()
-                if (active) {
+        if (!account || !channel) return;
+        let active = true;
+        let timer: ReturnType<typeof setInterval> | undefined;
+        ensureKeyChannel(account)
+            .then(async (technical) => {
+                if (!active) return;
+                setKeyChannelId(technical.id);
+                await refresh(technical.id);
+                if (active)
                     timer = setInterval(() => {
-                        if (document.visibilityState === 'visible') {
-                            void refreshMessages().catch(handleError)
-                        }
-                    }, 10000)
-                }
+                        if (document.visibilityState === "visible")
+                            void refresh(technical.id).catch((cause: unknown) =>
+                                handleError(cause, "Actualisation impossible."),
+                            );
+                    }, MESSAGE_REFRESH_MS);
             })
-            .catch(handleError)
-            .finally(() => { if (active) setLoading(false) })
-
+            .catch((cause: unknown) => {
+                if (active) handleError(cause, "Chargement impossible.");
+            });
         return () => {
-            active = false
-            if (timer) clearInterval(timer)
-        }
-    }, [id, navigate])
+            active = false;
+            if (timer) clearInterval(timer);
+        };
+    }, [account, channel?.id, refresh]);
 
     async function submit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault()
-        const text = content.trim()
-        if (!text || busy) return
-        setBusy(true)
-        setError('')
+        event.preventDefault();
+        const text = content.trim();
+        const instrument = account && accountInstrument(account);
+        if (!text || !instrument || keyChannelId === null || busy) return;
+        setBusy(true);
+        setError("");
         try {
-            await sendMessage(id, text)
-            setContent('')
-            await refreshMessages()
+            await sendMessage(id, text, { instrument });
+            setContent("");
+            await refresh(keyChannelId);
         } catch (cause) {
-            handleError(cause)
+            handleError(cause, "Envoi impossible.");
         } finally {
-            setBusy(false)
+            setBusy(false);
         }
     }
+
+    async function toggleKey() {
+        if (!account || keyChannelId === null || keyBusy) return;
+        setKeyBusy(true);
+        setError("");
+        try {
+            setKeyState(await toggleKeyState(keyChannelId, account, keyState));
+        } catch (cause) {
+            handleError(cause, "Mise à jour de la clé impossible.");
+        } finally {
+            setKeyBusy(false);
+        }
+    }
+
+    if (!accountLoading && account && !channel)
+        return (
+            <main>
+                <p>Groupe introuvable.</p>
+                <Link to={PATHS.home}>Retour</Link>
+            </main>
+        );
 
     return (
         <main>
-            <StaffSettingsPanel onChange={setStaffSettings} />
-            <p><Link to="/">Retour aux channels</Link></p>
-            <h1>{channelName || 'Channel'}</h1>
-            {loading && <p>Chargement des messages…</p>}
-            {error && <p role="alert">{error}</p>}
-            {!loading && channelName && (
-                <>
-                    <button type="button" onClick={() => void refreshMessages().catch(handleError)}>Actualiser</button>
-                    {messages.length ? (
-                        <ul>
-                            {messages.map((message, index) => (
-                                <li key={`${message.creation_date}-${message.user_id}-${index}`}>
-                                    <strong>{message.user}</strong> : {message.content}
-                                    <time dateTime={message.creation_date}> ({new Date(message.creation_date).toLocaleString('fr-FR')})</time>
-                                    <MessageStaff user={message.user} settings={staffSettings} />
-                                </li>
-                            ))}
-                        </ul>
-                    ) : <p>Aucun message.</p>}
-                    <form onSubmit={(event) => void submit(event)}>
-                        <label htmlFor="message-content">Message</label>
-                        <input id="message-content" value={content} onChange={(event) => setContent(event.target.value)} required />
-                        <button type="submit" disabled={busy}>Envoyer</button>
-                    </form>
-                </>
+            <PageHeader title={channel?.name ?? "Groupe"} back={PATHS.home} />
+            {account && keyChannelId !== null && (
+                <KeyControl
+                    state={keyState}
+                    userId={account.id}
+                    busy={keyBusy}
+                    onChange={() => void toggleKey()}
+                />
+            )}
+            {(accountLoading ||
+                (channel && keyChannelId === null && !error)) && (
+                <p>Chargement des messages…</p>
+            )}
+            {(accountError || error) && (
+                <p role="alert">{accountError || error}</p>
+            )}
+            <section aria-labelledby="messages-heading">
+                <h2 id="messages-heading">Messages</h2>
+                {messages.length ? (
+                    <ol>
+                        {[...messages].reverse().map((message, index) => (
+                            <MessageItem
+                                key={
+                                    message.id ??
+                                    `${message.creation_date}-${message.user_id}-${index}`
+                                }
+                                message={message}
+                                hasKey={keyState.holderId === message.user_id}
+                            />
+                        ))}
+                    </ol>
+                ) : (
+                    keyChannelId !== null && <p>Aucun message.</p>
+                )}
+            </section>
+            {channel && (
+                <form onSubmit={(event) => void submit(event)}>
+                    <label htmlFor="message-content">Message</label>
+                    <textarea
+                        id="message-content"
+                        value={content}
+                        onChange={(event) => setContent(event.target.value)}
+                        required
+                    />
+                    <button
+                        type="submit"
+                        disabled={
+                            !content.trim() || busy || keyChannelId === null
+                        }
+                    >
+                        Envoyer
+                    </button>
+                </form>
             )}
         </main>
-    )
+    );
 }
