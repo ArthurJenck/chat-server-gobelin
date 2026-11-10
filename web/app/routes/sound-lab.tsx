@@ -22,6 +22,8 @@ export default function SoundLab() {
     } | null>(null)
     const stopRef = useRef<(() => void) | null>(null)
     const playId = useRef(0)
+    const performanceCount = useRef(0)
+    const performanceKey = useRef('')
     const plan = createSoundPlan(text.trim(), settings)
 
     const changeSettings = useCallback((next: SoundSettings) => {
@@ -56,6 +58,12 @@ export default function SoundLab() {
 
     async function play() {
         if (!plan.events.length) return
+        const key = JSON.stringify([text.trim(), settings])
+        if (performanceKey.current !== key) {
+            performanceKey.current = key
+            performanceCount.current = 0
+        }
+        const playbackPlan = createSoundPlan(text.trim(), settings, performanceCount.current++)
         setVisual(null)
         stop()
         const id = ++playId.current
@@ -63,7 +71,7 @@ export default function SoundLab() {
         setPlaying(true)
         try {
             const stopPlayback = await startPlayback(
-                plan,
+                playbackPlan,
                 settings,
                 () => {
                     if (playId.current === id) {
@@ -73,7 +81,7 @@ export default function SoundLab() {
                 },
                 (getPlayhead) => {
                     if (playId.current === id)
-                        setVisual({ id, plan, settings, getPlayhead })
+                        setVisual({ id, plan: playbackPlan, settings, getPlayhead })
                 }
             )
             if (playId.current !== id) stopPlayback()

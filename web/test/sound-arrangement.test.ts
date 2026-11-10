@@ -25,18 +25,19 @@ describe('sound arrangement', () => {
         const settings = { ...DEFAULT_SOUND_SETTINGS, chordPlacement: 'above' as const }
         expect(harmonyAt(0, settings)).toEqual([64, 67])
         expect(harmonyAt(0.25, settings)).toEqual([])
-        expect(harmonyAt(0.5, settings)).toEqual([67, 71])
+        expect(harmonyAt(0.5, settings)).toEqual([67])
     })
 
-    it('can keep every chord major and place its tones below the melody', () => {
-        const settings = { ...DEFAULT_SOUND_SETTINGS, chordPlacement: 'below' as const, chordQuality: 'uniform' as const }
+    it('anchors chords to the tonic below the melody', () => {
+        const settings = { ...DEFAULT_SOUND_SETTINGS, chordPlacement: 'below' as const }
         expect(harmonyAt(0, settings)).toEqual([52, 55])
-        expect(harmonyAt(0.5, settings)).toEqual([56, 59])
+        expect(harmonyAt(0.5, settings)).toEqual([52, 55])
     })
 
-    it('harmonizes each note with the third in the selected direction', () => {
+    it('uses the lower third on stable chord tones only', () => {
         expect(harmonyAt(0.25, { ...DEFAULT_SOUND_SETTINGS, thirdPlacement: 'above' })).toEqual([65])
-        expect(harmonyAt(0.25, { ...DEFAULT_SOUND_SETTINGS, thirdPlacement: 'below' })).toEqual([59])
+        expect(harmonyAt(0.25, { ...DEFAULT_SOUND_SETTINGS, thirdPlacement: 'below' })).toEqual([])
+        expect(harmonyAt(0.5, { ...DEFAULT_SOUND_SETTINGS, thirdPlacement: 'below' })).toEqual([60])
     })
 
     it('supports held and repeated opening chords without changing the closing chord', () => {
@@ -45,6 +46,17 @@ describe('sound arrangement', () => {
         const repeated = createArrangement(plan, { ...base, chordRhythm: 'retrigger' })
         expect(held.find((note) => note.start === 0 && note.note === 64)?.duration).toBe(0.5)
         expect(repeated.some((note) => note.start === 0.25 && note.note === 64)).toBe(true)
-        expect(repeated.filter((note) => note.start === 0.5 && note.velocity === base.harmonyVelocity).map((note) => note.note)).toEqual([67, 71])
+        expect(repeated.filter((note) => note.start === 0.5 && note.velocity === base.harmonyVelocity).map((note) => note.note)).toEqual([67])
+    })
+
+    it('plays a short ending gesture on the final syllable', () => {
+        const ornamented: SoundPlan = {
+            ...plan,
+            events: plan.events.map((event, index) => index === 2 ? { ...event, endingMidi: 67 } : event),
+        }
+        const notes = createArrangement(ornamented, DEFAULT_SOUND_SETTINGS)
+
+        expect(notes.some((note) => note.note === 64 && note.start === 0.5 && note.duration < 0.2)).toBe(true)
+        expect(notes.some((note) => note.note === 67 && note.start > 0.5)).toBe(true)
     })
 })

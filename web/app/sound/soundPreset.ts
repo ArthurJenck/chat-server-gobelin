@@ -35,27 +35,32 @@ export function saveInstrumentProfiles(profiles: Partial<Record<Instrument, Inst
 }
 
 export function serializePreset(settings: SoundSettings) {
-    return JSON.stringify({ version: 6, settings }, null, 2)
+    return JSON.stringify({ version: 7, settings }, null, 2)
 }
 
 export function parsePreset(value: string): SoundSettings {
     const parsed: unknown = JSON.parse(value)
-    if (!parsed || typeof parsed !== 'object' || !('version' in parsed) || ![1, 2, 3, 4, 5, 6].includes(parsed.version as number)
+    if (!parsed || typeof parsed !== 'object' || !('version' in parsed) || ![1, 2, 3, 4, 5, 6, 7].includes(parsed.version as number)
         || !('settings' in parsed) || !parsed.settings || typeof parsed.settings !== 'object') {
         throw new Error('Preset incompatible.')
     }
     const saved = parsed.settings as Record<string, unknown>
-    if (parsed.version === 1 && !['sine', 'triangle', 'sawtooth', 'square'].includes(saved.waveform as string)) {
+    const version = parsed.version as number
+    if (version === 1 && !['sine', 'triangle', 'sawtooth', 'square'].includes(saved.waveform as string)) {
         throw new Error('Preset invalide.')
     }
+    const relativeMinor = version < 7 && saved.mode === 'minor' && saved.relation === 'relative' &&
+        typeof saved.root === 'number' && typeof saved.octave === 'number'
     const migrated: Record<string, unknown> = {
-        ...Object.fromEntries(Object.entries(DEFAULT_SOUND_SETTINGS).filter(([key]) => key.startsWith('visual') || ['chordPlacement', 'chordQuality', 'chordRhythm', 'thirdPlacement', 'harmonyVelocity'].includes(key))),
+        ...DEFAULT_SOUND_SETTINGS,
         ...saved,
-        instrument: parsed.version === 1 ? 'piano' : saved.instrument,
-        melodyMovement: saved.melodyMovement ?? DEFAULT_SOUND_SETTINGS.melodyMovement,
-        maxDuration: typeof saved.maxDuration === 'number' ? Math.min(saved.maxDuration, 10) : saved.maxDuration,
-        wordGap: parsed.version === 4 || parsed.version === 5 || parsed.version === 6 ? saved.wordGap
-            : typeof saved.wordGap === 'number' && saved.wordGap <= 3 ? Math.round(saved.wordGap * 300) : saved.wordGap,
+        instrument: version === 1 ? 'piano' : saved.instrument,
+        root: relativeMinor ? (saved.root as number + 9) % 12 : saved.root ?? DEFAULT_SOUND_SETTINGS.root,
+        octave: relativeMinor && (saved.root as number) < 3
+            ? Math.max(SOUND_RANGES.octave.min, (saved.octave as number) - 1) : saved.octave ?? DEFAULT_SOUND_SETTINGS.octave,
+        maxDuration: typeof saved.maxDuration === 'number' ? Math.min(saved.maxDuration, 10) : DEFAULT_SOUND_SETTINGS.maxDuration,
+        wordGap: version >= 4 ? saved.wordGap ?? DEFAULT_SOUND_SETTINGS.wordGap
+            : typeof saved.wordGap === 'number' && saved.wordGap <= 3 ? Math.round(saved.wordGap * 300) : saved.wordGap ?? DEFAULT_SOUND_SETTINGS.wordGap,
     }
     const settings = Object.fromEntries(Object.keys(DEFAULT_SOUND_SETTINGS).map((key) => [key, migrated[key]]))
     const valid = (Object.keys(DEFAULT_SOUND_SETTINGS) as (keyof SoundSettings)[]).every((key) => {
@@ -64,19 +69,15 @@ export function parsePreset(value: string): SoundSettings {
         if (typeof actual !== typeof expected) return false
         if (typeof actual === 'number') {
             if (!Number.isFinite(actual)) return false
+            if (key.startsWith('degree') && !Number.isInteger(actual)) return false
             const range = SOUND_RANGES[key as keyof typeof SOUND_RANGES]
             return !range || actual >= range.min && actual <= range.max
         }
         if (typeof expected === 'string') {
             const choices: Partial<Record<keyof SoundSettings, readonly string[]>> = {
-                segmentation: ['characters', 'syllables', 'words'],
                 speedMode: ['fixed', 'length'],
-                algorithm: ['skeleton', 'transitions'],
                 mode: ['major', 'minor'],
-                relation: ['relative', 'parallel'],
-                contour: ['arch', 'ascending', 'descending', 'random'],
                 chordPlacement: ['off', 'above', 'below'],
-                chordQuality: ['diatonic', 'uniform'],
                 chordRhythm: ['accent', 'sustain', 'retrigger'],
                 thirdPlacement: ['off', 'above', 'below'],
                 instrument: Object.keys(INSTRUMENTS),

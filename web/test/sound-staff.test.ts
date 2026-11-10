@@ -23,7 +23,7 @@ it('adds an independent visual gap between words', () => {
     expect(normal.groups[2].x - normal.groups[1].x).toBeGreaterThan(normal.groups[1].x - normal.groups[0].x)
     expect(widerWords.groups[1].x).toBe(normal.groups[1].x)
     expect(widerWords.groups[2].x - normal.groups[2].x).toBe(30 - DEFAULT_SOUND_SETTINGS.visualWordSpacing)
-    expect(widerGroups.groups[1].x - normal.groups[1].x).toBe(4)
+    expect(widerGroups.groups[1].x - normal.groups[1].x).toBe(20 - DEFAULT_SOUND_SETTINGS.visualSpacing)
     expect(longerAudioPause.groups.map((group) => group.x)).toEqual(normal.groups.map((group) => group.x))
 })
 
@@ -59,8 +59,8 @@ it('moves whole groups to the next staff when they do not fit', () => {
     const layout = layoutSoundStaff(plan, DEFAULT_SOUND_SETTINGS, 30)
     const longWord = layoutSoundStaff({ ...plan, events: [plan.events[0], { ...plan.events[1], text: 'extraordinaire' }] }, DEFAULT_SOUND_SETTINGS, 30)
 
-    expect(layout.rows).toHaveLength(3)
-    expect(layout.rows.map((row) => row.map((group) => group.text))).toEqual([['a'], ['b'], ['c']])
+    expect(layout.rows).toHaveLength(2)
+    expect(layout.rows.map((row) => row.map((group) => group.text))).toEqual([['a', 'b'], ['c']])
     expect(layout.rows.every((row) => row[0].x === 0)).toBe(true)
     expect(longWord.rows.map((row) => row.map((group) => group.text))).toEqual([['a'], ['extraordinaire']])
 })

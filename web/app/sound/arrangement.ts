@@ -15,12 +15,6 @@ function noteDuration(plan: SoundPlan, index: number, lastIndex: number, setting
 }
 
 function chordTones(root: number, plan: SoundPlan, settings: SoundSettings) {
-    if (settings.chordQuality === 'uniform') {
-        const third = settings.mode === 'major' ? 4 : 3
-        return settings.chordPlacement === 'above'
-            ? [root + third, root + 7]
-            : [root + third - 12, root - 5]
-    }
     const degree = getScaleDegree(root, plan.tonicMidi, settings.mode)
     return settings.chordPlacement === 'above'
         ? [getScalePitch(degree + 2, plan.tonicMidi, settings.mode), getScalePitch(degree + 4, plan.tonicMidi, settings.mode)]
@@ -46,11 +40,17 @@ export function createArrangement(plan: SoundPlan, settings: SoundSettings): Pla
     for (const index of noteIndexes) {
         const event = plan.events[index]
         const duration = noteDuration(plan, index, lastIndex, settings)
-        add(event.midi!, event.start, duration, 90)
-        if (settings.thirdPlacement !== 'off') {
+        const ornamentDelay = event.endingMidi === undefined ? 0 : Math.min(0.15, duration * 0.35)
+        add(event.midi!, event.start, ornamentDelay || duration, event.velocity ?? 90)
+        if (event.endingMidi !== undefined) {
+            add(event.endingMidi, event.start + ornamentDelay, Math.max(0.05, duration - ornamentDelay), event.velocity ?? 90)
+        }
+        if (settings.thirdPlacement !== 'off' && event.endingMidi === undefined) {
             const degree = getScaleDegree(event.midi!, plan.tonicMidi, settings.mode)
-            const thirdDegree = degree + (settings.thirdPlacement === 'above' ? 2 : -2)
-            add(getScalePitch(thirdDegree, plan.tonicMidi, settings.mode), event.start, duration, settings.harmonyVelocity)
+            if (settings.thirdPlacement === 'above' || [2, 4].includes(((degree % 7) + 7) % 7)) {
+                const thirdDegree = degree + (settings.thirdPlacement === 'above' ? 2 : -2)
+                add(getScalePitch(thirdDegree, plan.tonicMidi, settings.mode), event.start, duration, settings.harmonyVelocity)
+            }
         }
     }
 
@@ -65,15 +65,15 @@ export function createArrangement(plan: SoundPlan, settings: SoundSettings): Pla
         if (settings.chordRhythm === 'retrigger') {
             for (const index of noteIndexes.slice(0, -1)) {
                 const event = plan.events[index]
-                addChord(first.midi!, event.start, noteDuration(plan, index, lastIndex, settings))
+                addChord(plan.tonicMidi, event.start, noteDuration(plan, index, lastIndex, settings))
             }
         } else if (firstIndex !== lastIndex) {
             const duration = settings.chordRhythm === 'sustain'
                 ? Math.max(noteDuration(plan, firstIndex, lastIndex, settings), last.start - first.start)
                 : noteDuration(plan, firstIndex, lastIndex, settings)
-            addChord(first.midi!, first.start, duration)
+            addChord(plan.tonicMidi, first.start, duration)
         }
-        addChord(last.midi!, last.start, noteDuration(plan, lastIndex, lastIndex, settings))
+        addChord(plan.tonicMidi, last.start, noteDuration(plan, lastIndex, lastIndex, settings))
     }
 
     return notes.sort((left, right) => left.start - right.start || left.note - right.note)

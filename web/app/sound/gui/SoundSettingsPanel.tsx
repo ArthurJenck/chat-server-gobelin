@@ -53,14 +53,6 @@ export default function SoundSettingsPanel({
                 },
                 Accord: folder(
                     {
-                        chordQuality: {
-                            value: initialSettings.chordQuality,
-                            label: 'Composition',
-                            options: {
-                                'Dans la gamme': 'diatonic',
-                                'Toujours majeur/mineur': 'uniform',
-                            },
-                        },
                         chordRhythm: {
                             value: initialSettings.chordRhythm,
                             label: 'Articulation',
@@ -78,7 +70,7 @@ export default function SoundSettingsPanel({
                 ),
                 thirdPlacement: {
                     value: initialSettings.thirdPlacement,
-                    label: 'Tierce par note',
+                    label: 'Tierce mélodique',
                     options: {
                         Désactivée: 'off',
                         'Au-dessus': 'above',
@@ -93,21 +85,6 @@ export default function SoundSettingsPanel({
                 },
             }),
             Découpage: folder({
-                segmentation: {
-                    value: initialSettings.segmentation,
-                    label: 'Unité',
-                    options: {
-                        Caractères: 'characters',
-                        Syllabes: 'syllables',
-                        Mots: 'words',
-                    },
-                },
-                crossWordSyllables: {
-                    value: initialSettings.crossWordSyllables,
-                    label: 'Lier les mots',
-                    render: (get) =>
-                        get('Découpage.segmentation') === 'syllables',
-                },
                 densité: monitor(
                     () => densityRef.current.toFixed(1) + ' notes/s'
                 ),
@@ -138,38 +115,14 @@ export default function SoundSettingsPanel({
                 ),
             }),
             'Gamme et mélodie': folder({
-                algorithm: {
-                    value: initialSettings.algorithm,
-                    label: 'Générateur',
-                    options: {
-                        'Courbe guidée': 'skeleton',
-                        'Notes voisines': 'transitions',
-                    },
-                },
                 mode: {
                     value: initialSettings.mode,
                     label: 'Mode',
                     options: { Majeur: 'major', Mineur: 'minor' },
                 },
-                'Mode mineur': folder(
-                    {
-                        relation: {
-                            value: initialSettings.relation,
-                            label: 'Lien des gammes',
-                            options: {
-                                Relatives: 'relative',
-                                Parallèles: 'parallel',
-                            },
-                        },
-                    },
-                    {
-                        render: (get) =>
-                            get('Gamme et mélodie.mode') === 'minor',
-                    }
-                ),
                 root: {
                     value: initialSettings.root,
-                    label: 'Note majeure',
+                    label: 'Tonique',
                     options: {
                         Do: 0,
                         'Do♯': 1,
@@ -186,48 +139,27 @@ export default function SoundSettingsPanel({
                     },
                 },
                 octave: number('octave', 'Octave'),
-                contour: {
-                    value: initialSettings.contour,
-                    label: 'Contour',
-                    options: {
-                        Arche: 'arch',
-                        Montant: 'ascending',
-                        Descendant: 'descending',
-                        Aléatoire: 'random',
-                    },
-                },
-                'Courbe guidée': folder(
-                    {
-                        phraseLength: number(
-                            'phraseLength',
-                            'Notes par courbe'
-                        ),
-                        'À quoi ça sert': monitor(
-                            () =>
-                                'La courbe recommence après ce nombre de notes.'
-                        ),
-                    },
-                    {
-                        render: (get) =>
-                            get('Gamme et mélodie.algorithm') === 'skeleton',
-                    }
-                ),
-                melodyMovement: number('melodyMovement', 'Variation/mot'),
-                limitWithinWord: {
-                    value: initialSettings.limitWithinWord,
-                    label: 'Limiter par mot',
-                },
-                'Limiter par mot': folder(
-                    {
-                        maxWithinWordSemitones: number(
-                            'maxWithinWordSemitones',
-                            'Écart max'
-                        ),
-                    },
-                    { render: (get) => get('Gamme et mélodie.limitWithinWord') }
-                ),
-                restChance: number('restChance', 'Chance de pause'),
-                seed: number('seed', 'Seed'),
+            }),
+            Correspondances: folder({
+                Degrés: monitor(() => '0 do · 1 ré · 2 mi · 3 fa · 4 sol · 5 la · 6 si'),
+                degreeA: number('degreeA', 'A'),
+                degreeE: number('degreeE', 'É / È / AI'),
+                degreeI: number('degreeI', 'I'),
+                degreeO: number('degreeO', 'O / AU / EAU'),
+                degreeU: number('degreeU', 'U'),
+                degreeOU: number('degreeOU', 'OU'),
+                degreeIN: number('degreeIN', 'IN / AIN / IEN'),
+            }, { collapsed: true }),
+            'Choix des notes': folder({
+                soundWeight: number('soundWeight', 'Correspondance écrite'),
+                chordWeight: number('chordWeight', 'Note de l’accord'),
+                directionWeight: number('directionWeight', 'Direction du groupe'),
+                repetitionWeight: number('repetitionWeight', 'Répétition identique'),
+                repeatPenalty: number('repeatPenalty', 'Pénalité répétition'),
+                leapPenalty: number('leapPenalty', 'Pénalité grand saut'),
+                resolutionWeight: number('resolutionWeight', 'Résolution tension'),
+                cadenceWeight: number('cadenceWeight', 'Intonation finale'),
+                variationWeight: number('variationWeight', 'Variation à la lecture'),
             }),
 
             Portée: folder({

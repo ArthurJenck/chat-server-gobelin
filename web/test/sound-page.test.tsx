@@ -17,7 +17,9 @@ it('opens the sound workshop without signing in', async () => {
 
     expect(screen.getByRole('textbox', { name: 'Texte' })).toBeInTheDocument()
     expect(screen.getByText('Accélération')).toBeInTheDocument()
-    expect(screen.getByText('Notes par courbe')).toBeInTheDocument()
+    expect(screen.getByText('Correspondance écrite')).toBeInTheDocument()
+    expect(screen.getByText('Répétition identique')).toBeInTheDocument()
+    expect(screen.queryByText('Notes par courbe')).not.toBeInTheDocument()
     expect(screen.getByText('Écart mots')).toBeInTheDocument()
     expect(screen.getByText('Retard texte (ms)')).toBeInTheDocument()
     expect(screen.queryByText('Écart notes')).not.toBeInTheDocument()
@@ -31,14 +33,14 @@ it('resets saved sound settings', async () => {
     window.localStorage.setItem('gobelin_sound_settings_v1', serializePreset({
         ...DEFAULT_SOUND_SETTINGS,
         intervalMs: 700,
-        melodyMovement: 9,
+        soundWeight: 9,
     }))
     renderApp('/atelier-son')
 
     await userEvent.click(screen.getByText('Réinitialiser'))
 
     await waitFor(() => expect(JSON.parse(window.localStorage.getItem('gobelin_sound_settings_v1')!).settings.intervalMs).toBe(240))
-    expect(JSON.parse(window.localStorage.getItem('gobelin_sound_settings_v1')!).settings.melodyMovement).toBe(5)
+    expect(JSON.parse(window.localStorage.getItem('gobelin_sound_settings_v1')!).settings.soundWeight).toBe(4)
 })
 
 it('starts and stops a text melody from the workshop', async () => {
@@ -125,7 +127,12 @@ it('restarts from the beginning when Play is pressed during playback', async () 
 
     await waitFor(() => expect(playback.start).toHaveBeenCalledTimes(2))
     expect(firstStop).toHaveBeenCalledOnce()
-    expect(playback.start.mock.calls[1][0].events).toEqual(playback.start.mock.calls[0][0].events)
+    expect(playback.start.mock.calls[1][0].events.map((event: { text: string }) => event.text)).toEqual(
+        playback.start.mock.calls[0][0].events.map((event: { text: string }) => event.text),
+    )
+    expect(playback.start.mock.calls[1][0].events.map((event: { start: number }) => event.start)).not.toEqual(
+        playback.start.mock.calls[0][0].events.map((event: { start: number }) => event.start),
+    )
 })
 
 it('shows five staff lines and reveals the played groups from the audio schedule', async () => {

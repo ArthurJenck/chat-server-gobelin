@@ -105,27 +105,31 @@ export const INSTRUMENT_PROFILES: Record<Instrument, { octave: number, intervalM
 }
 
 export type SoundSettings = {
-    segmentation: 'characters' | 'syllables' | 'words'
-    crossWordSyllables: boolean
     speedMode: 'fixed' | 'length'
     intervalMs: number
     lengthFactor: number
     maxDuration: number
     wordGap: number
-    algorithm: 'skeleton' | 'transitions'
     mode: 'major' | 'minor'
-    relation: 'relative' | 'parallel'
     root: number
     octave: number
-    contour: 'arch' | 'ascending' | 'descending' | 'random'
-    phraseLength: number
-    limitWithinWord: boolean
-    maxWithinWordSemitones: number
-    melodyMovement: number
-    restChance: number
-    seed: number
+    degreeA: number
+    degreeE: number
+    degreeI: number
+    degreeO: number
+    degreeU: number
+    degreeOU: number
+    degreeIN: number
+    soundWeight: number
+    chordWeight: number
+    directionWeight: number
+    repetitionWeight: number
+    repeatPenalty: number
+    leapPenalty: number
+    resolutionWeight: number
+    cadenceWeight: number
+    variationWeight: number
     chordPlacement: 'off' | 'above' | 'below'
-    chordQuality: 'diatonic' | 'uniform'
     chordRhythm: 'accent' | 'sustain' | 'retrigger'
     thirdPlacement: 'off' | 'above' | 'below'
     harmonyVelocity: number
@@ -152,27 +156,31 @@ export type SoundSettings = {
 export type InstrumentProfileSettings = Pick<SoundSettings, 'octave' | 'intervalMs' | 'wordGap' | 'gate'>
 
 export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
-    segmentation: 'syllables',
-    crossWordSyllables: false,
     speedMode: 'length',
     intervalMs: 240,
     lengthFactor: 0.4,
     maxDuration: 10,
     wordGap: 120,
-    algorithm: 'skeleton',
     mode: 'major',
-    relation: 'relative',
     root: 0,
     octave: 5,
-    contour: 'arch',
-    phraseLength: 6,
-    limitWithinWord: false,
-    maxWithinWordSemitones: 4,
-    melodyMovement: 5,
-    restChance: 0,
-    seed: 1,
+    degreeA: 0,
+    degreeE: 2,
+    degreeI: 5,
+    degreeO: 1,
+    degreeU: 3,
+    degreeOU: 4,
+    degreeIN: 1,
+    soundWeight: 4,
+    chordWeight: 3,
+    directionWeight: 5,
+    repetitionWeight: 6,
+    repeatPenalty: 3,
+    leapPenalty: 2,
+    resolutionWeight: 5,
+    cadenceWeight: 8,
+    variationWeight: 1,
     chordPlacement: 'off',
-    chordQuality: 'diatonic',
     chordRhythm: 'accent',
     thirdPlacement: 'off',
     harmonyVelocity: 55,
@@ -212,11 +220,22 @@ export const SOUND_RANGES = {
     maxDuration: { min: 1, max: 10, step: 0.5 },
     wordGap: { min: 0, max: 2000, step: 10 },
     octave: { min: 2, max: 6, step: 1 },
-    phraseLength: { min: 2, max: 32, step: 1 },
-    maxWithinWordSemitones: { min: 0, max: 24, step: 1 },
-    melodyMovement: { min: 0, max: 10, step: 1 },
-    restChance: { min: 0, max: 0.8, step: 0.01 },
-    seed: { min: 0, max: 999999, step: 1 },
+    degreeA: { min: 0, max: 6, step: 1 },
+    degreeE: { min: 0, max: 6, step: 1 },
+    degreeI: { min: 0, max: 6, step: 1 },
+    degreeO: { min: 0, max: 6, step: 1 },
+    degreeU: { min: 0, max: 6, step: 1 },
+    degreeOU: { min: 0, max: 6, step: 1 },
+    degreeIN: { min: 0, max: 6, step: 1 },
+    soundWeight: { min: 0, max: 12, step: 0.25 },
+    chordWeight: { min: 0, max: 12, step: 0.25 },
+    directionWeight: { min: 0, max: 12, step: 0.25 },
+    repetitionWeight: { min: 0, max: 12, step: 0.25 },
+    repeatPenalty: { min: 0, max: 12, step: 0.25 },
+    leapPenalty: { min: 0, max: 12, step: 0.25 },
+    resolutionWeight: { min: 0, max: 12, step: 0.25 },
+    cadenceWeight: { min: 0, max: 12, step: 0.25 },
+    variationWeight: { min: 0, max: 4, step: 0.1 },
     harmonyVelocity: { min: 1, max: 100, step: 1 },
     gate: { min: 0.05, max: 1, step: 0.01 },
     filterFrequency: { min: 100, max: 12000, step: 50 },
