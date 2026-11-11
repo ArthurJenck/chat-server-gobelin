@@ -1,0 +1,19 @@
+.emphasized-text {
+    position: relative;
+    display: inline-block;
+    isolation: isolate;
+}
+
+.emphasized-text::after {
+    position: absolute;
+    inset: 0;
+    content: attr(data-text);
+    filter: blur(4px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.emphasized-text-face {
+    position: relative;
+    z-index: 1;
+}

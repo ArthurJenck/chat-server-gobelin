@@ -1,0 +1,30 @@
+.auth-form,
+.auth-fields,
+.auth-password-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-form {
+    width: 100%;
+    gap: var(--auth-action-gap);
+}
+
+.auth-fields {
+    gap: 20px;
+}
+
+.auth-password-group {
+    gap: 5px;
+}
+
+.auth-forgot {
+    align-self: flex-end;
+    font-size: 15px;
+    line-height: 20px;
+}
+
+.auth-submit {
+    align-self: flex-end;
+    padding-left: 21px;
+}

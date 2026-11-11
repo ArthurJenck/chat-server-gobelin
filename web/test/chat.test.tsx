@@ -37,9 +37,9 @@ beforeEach(() => {
 });
 
 async function signIn() {
-    await userEvent.type(screen.getByLabelText("Nom d’utilisateur"), " Alice ");
-    await userEvent.type(screen.getByLabelText("Mot de passe"), "secret");
-    await userEvent.click(screen.getByRole("button", { name: "Se connecter" }));
+    await userEvent.type(screen.getByLabelText("Nom d’utilisateur :"), " Alice ");
+    await userEvent.type(screen.getByLabelText("Mot de passe :"), "secret");
+    await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
 }
 
 function mockLogin(current: Account = account) {
@@ -64,7 +64,7 @@ describe("Harmonie", () => {
         ).toBeInTheDocument();
         await userEvent.click(screen.getByRole("button", { name: "C'est parti !" }));
         expect(
-            await screen.findByRole("heading", { name: "Connexion" }),
+            await screen.findByRole("heading", { name: "Se connecter" }),
         ).toBeInTheDocument();
     });
 

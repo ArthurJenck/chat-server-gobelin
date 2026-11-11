@@ -1,0 +1,14 @@
+.login-page {
+    --auth-content-gap: clamp(40px, 15svh, 127px);
+    --auth-action-gap: clamp(40px, 16svh, 135px);
+}
+
+.login-page-error {
+    --auth-content-gap: clamp(90px, 15svh, 127px);
+}
+
+.login-page .auth-content > [role="alert"] {
+    top: calc(50px + var(--auth-content-gap) - 60px);
+    color: var(--color-key-do-minor);
+    line-height: 20px;
+}

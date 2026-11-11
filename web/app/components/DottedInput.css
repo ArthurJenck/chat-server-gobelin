@@ -1,0 +1,43 @@
+.dotted-input-field {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+.dotted-input-copy {
+    display: flex;
+    flex-direction: column;
+}
+
+.dotted-input-field label {
+    font-size: 20px;
+    line-height: 25px;
+}
+
+.dotted-input-hint {
+    color: rgb(0 0 0 / 45%);
+    font-size: 16px;
+    line-height: 20px;
+}
+
+.dotted-input-field input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 40px;
+    padding: 0 20px;
+    border: 1px dotted rgb(0 0 0 / 40%);
+    border-radius: 0;
+    outline-offset: 2px;
+    background: transparent;
+    font-size: 16px;
+}
+
+.dotted-input-field input[aria-invalid="true"] {
+    border-color: var(--color-key-do-minor);
+}
+
+.dotted-input-field input::placeholder {
+    color: rgb(0 0 0 / 45%);
+    opacity: 1;
+}

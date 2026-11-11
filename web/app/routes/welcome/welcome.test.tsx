@@ -33,7 +33,7 @@ describe("Welcome page", () => {
         );
 
         expect(
-            await screen.findByRole("heading", { name: "Connexion" }),
+            await screen.findByRole("heading", { name: "Se connecter" }),
         ).toBeInTheDocument();
     });
 });

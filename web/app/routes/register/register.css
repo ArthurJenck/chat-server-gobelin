@@ -1,0 +1,4 @@
+.register-page {
+    --auth-content-gap: clamp(40px, 10svh, 87px);
+    --auth-action-gap: clamp(40px, 14svh, 120px);
+}

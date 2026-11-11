@@ -22,16 +22,66 @@
     position: absolute;
     inset: 0;
     background:
-        repeating-linear-gradient(90deg, rgb(0 0 0 / 40%) 0 2px, transparent 2px 4px) top / 100% 1px no-repeat,
-        repeating-linear-gradient(90deg, rgb(0 0 0 / 40%) 0 2px, transparent 2px 4px) bottom / 100% 1px no-repeat,
-        repeating-linear-gradient(0deg, rgb(0 0 0 / 40%) 0 2px, transparent 2px 4px) left / 1px 100% no-repeat,
-        repeating-linear-gradient(0deg, rgb(0 0 0 / 40%) 0 2px, transparent 2px 4px) right / 1px 100% no-repeat;
+        repeating-linear-gradient(
+                90deg,
+                rgb(0 0 0 / 40%) 0 2px,
+                transparent 2px 4px
+            )
+            top / 100% 1px no-repeat,
+        repeating-linear-gradient(
+                90deg,
+                rgb(0 0 0 / 40%) 0 2px,
+                transparent 2px 4px
+            )
+            bottom / 100% 1px no-repeat,
+        repeating-linear-gradient(
+                0deg,
+                rgb(0 0 0 / 40%) 0 2px,
+                transparent 2px 4px
+            )
+            left / 1px 100% no-repeat,
+        repeating-linear-gradient(
+                0deg,
+                rgb(0 0 0 / 40%) 0 2px,
+                transparent 2px 4px
+            )
+            right / 1px 100% no-repeat;
     content: "";
     pointer-events: none;
+}
+
+.dotted-button-content {
+    display: inline-flex;
+    align-items: center;
+}
+
+.dotted-button:disabled .dotted-button-content {
+    opacity: 0.5;
+}
+
+.dotted-button:disabled {
+    cursor: default;
+}
+
+.dotted-button-icon {
+    position: relative;
+    display: block;
 }
 
 .dotted-button img {
     display: block;
     width: 35px;
     height: 28px;
+}
+
+.dotted-button-icon-blur {
+    position: absolute;
+    inset: 0;
+    filter: blur(4px);
+    z-index: 0;
+}
+
+.dotted-button-icon-face {
+    position: relative;
+    z-index: 1;
 }
