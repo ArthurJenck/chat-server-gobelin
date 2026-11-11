@@ -13,13 +13,22 @@ describe("Login page", () => {
         expect(screen.getByRole("heading", { name: "Se connecter" })).toBeInTheDocument();
         expect(screen.getByLabelText("Nom d’utilisateur :")).toHaveAttribute("placeholder", "tutur_legoat");
         expect(screen.getByLabelText("Mot de passe :")).toHaveAttribute("type", "password");
-        expect(screen.getByText("J’ai oublié mon mot de passe")).toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: "J’ai oublié mon mot de passe" })).not.toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "J’ai oublié mon mot de passe" })).toHaveAttribute("href", "/mot-de-passe-oublie");
         expect(screen.getByRole("button", { name: "Continuer" }).querySelector("img")).toHaveAttribute("src", "/pictos/arrow.svg");
         expect(screen.getByRole("button", { name: "Continuer" }).querySelectorAll("img")).toHaveLength(2);
         expect(screen.getByRole("button", { name: "Continuer" })).toBeDisabled();
 
         await userEvent.click(screen.getByRole("link", { name: "Inscris-toi" }));
+        expect(await screen.findByRole("heading", { name: "S’inscrire" })).toBeInTheDocument();
+    });
+
+    it("opens the forgot password page and goes to registration", async () => {
+        renderApp("/login");
+
+        await userEvent.click(screen.getByRole("link", { name: "J’ai oublié mon mot de passe" }));
+        expect(await screen.findByRole("heading", { name: "Gros loser ! Crée un nouveau compte" })).toBeInTheDocument();
+
+        await userEvent.click(screen.getByRole("button", { name: "S’inscrire" }));
         expect(await screen.findByRole("heading", { name: "S’inscrire" })).toBeInTheDocument();
     });
 

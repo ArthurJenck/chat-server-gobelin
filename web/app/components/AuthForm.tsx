@@ -1,4 +1,5 @@
 import type { FormEventHandler } from "react";
+import { Link } from "react-router";
 import DottedButton from "./DottedButton";
 import DottedInput from "./DottedInput";
 import EmphasizedText from "./EmphasizedText";
@@ -37,7 +38,11 @@ export default function AuthForm({
                 <DottedInput
                     id={`${mode}-username`}
                     label="Nom d’utilisateur :"
-                    hint={isRegister ? "Ton nom ne pourra plus être changé" : undefined}
+                    hint={
+                        isRegister
+                            ? "Ton nom ne pourra plus être changé"
+                            : undefined
+                    }
                     autoComplete="username"
                     placeholder="tutur_legoat"
                     value={username}
@@ -51,18 +56,24 @@ export default function AuthForm({
                         id={`${mode}-password`}
                         label="Mot de passe :"
                         type="password"
-                        autoComplete={isRegister ? "new-password" : "current-password"}
+                        autoComplete={
+                            isRegister ? "new-password" : "current-password"
+                        }
                         placeholder="*****"
                         value={password}
                         invalid={error}
                         aria-describedby={error ? "login-error" : undefined}
-                        onChange={(event) => onPasswordChange(event.target.value)}
+                        onChange={(event) =>
+                            onPasswordChange(event.target.value)
+                        }
                         required
                     />
                     {!isRegister && (
-                        <span className="auth-forgot">
-                            <EmphasizedText>J’ai oublié mon mot de passe</EmphasizedText>
-                        </span>
+                        <Link className="auth-forgot" to="/forgot-password">
+                            <EmphasizedText>
+                                J’ai oublié mon mot de passe
+                            </EmphasizedText>
+                        </Link>
                     )}
                 </div>
                 {isRegister ? (
@@ -73,7 +84,9 @@ export default function AuthForm({
                         autoComplete="new-password"
                         placeholder="*****"
                         value={confirmation ?? ""}
-                        onChange={(event) => onConfirmationChange?.(event.target.value)}
+                        onChange={(event) =>
+                            onConfirmationChange?.(event.target.value)
+                        }
                         required
                     />
                 ) : null}
@@ -84,7 +97,10 @@ export default function AuthForm({
                 emphasized
                 type="submit"
                 disabled={
-                    busy || !username.trim() || !password || (isRegister && !confirmation)
+                    busy ||
+                    !username.trim() ||
+                    !password ||
+                    (isRegister && !confirmation)
                 }
             >
                 Continuer

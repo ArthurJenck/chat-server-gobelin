@@ -22,6 +22,7 @@
     align-self: flex-end;
     font-size: 15px;
     line-height: 20px;
+    text-decoration: none;
 }
 
 .auth-submit {
