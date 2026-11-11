@@ -147,6 +147,7 @@ func (h channelHandler) EnterChannel(writer http.ResponseWriter, request *http.R
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	h.hub.Broadcast(result, []int64{channel.ID})
 	writer.WriteHeader(http.StatusOK)
 	writer.Write(result)
 }
@@ -211,6 +212,7 @@ func (h channelHandler) EditChannel(writer http.ResponseWriter, request *http.Re
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	h.hub.Broadcast(result, []int64{channel.ID})
 	writer.WriteHeader(http.StatusOK)
 	writer.Write(result)
 }
