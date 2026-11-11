@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { startPlayback } from "../app/sound/audioEngine";
+import { startPlayback } from "../app/features/sound/audioEngine";
 import {
     DEFAULT_SOUND_SETTINGS,
     type Instrument,
-} from "../app/sound/soundConfig";
-import type { SoundPlan } from "../app/sound/soundPlan";
+} from "../app/features/sound/soundConfig";
+import type { SoundPlan } from "../app/features/sound/soundPlan";
 
 const sampler = vi.hoisted(() => ({
     create: vi.fn(),

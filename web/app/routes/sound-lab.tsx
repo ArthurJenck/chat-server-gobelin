@@ -1,23 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { getToken } from "../api";
-import { startPlayback } from "../sound/audioEngine";
-import SoundSettingsPanel from "../sound/gui/SoundSettingsPanel";
+import { getToken } from "../features/auth/token";
+import { startPlayback } from "../features/sound/audioEngine";
+import SoundSettingsPanel from "../features/sound/gui/SoundSettingsPanel";
 import {
     INSTRUMENTS,
     instrumentProfileSettings,
     withInstrumentProfile,
     type Instrument,
     type SoundSettings,
-} from "../sound/soundConfig";
+} from "../features/sound/soundConfig";
 import {
     readSavedInstrumentProfiles,
     readSavedSoundSettings,
     saveInstrumentProfiles,
     saveSoundSettings,
-} from "../sound/soundPreset";
-import { createSoundPlan, type SoundPlan } from "../sound/soundPlan";
-import SoundStaff from "../sound/visual/SoundStaff";
+} from "../features/sound/soundPreset";
+import { createSoundPlan, type SoundPlan } from "../features/sound/soundPlan";
+import SoundStaff from "../features/sound/visual/SoundStaff";
 
 export default function SoundLab() {
     const [text, setText] = useState("");

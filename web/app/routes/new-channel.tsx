@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import PageHeader from "../components/PageHeader";
-import { KEY_CHANNEL_NAME, PATHS } from "../config";
-import { createOrEnterChannel } from "../managers/channels";
-import { useAccount } from "../managers/useAccount";
+import { KEY_CHANNEL_NAME, PATHS } from "../shared/config";
+import { createOrEnterChannel } from "../features/channels/channels";
+import { useAccount } from "../features/auth/useAccount";
 
 export default function NewChannel() {
     const navigate = useNavigate();

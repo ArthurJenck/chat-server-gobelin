@@ -1,8 +1,8 @@
 import { render } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { DEFAULT_SOUND_SETTINGS } from "../app/sound/soundConfig";
-import type { SoundPlan } from "../app/sound/soundPlan";
-import SoundStaff from "../app/sound/visual/SoundStaff";
+import { DEFAULT_SOUND_SETTINGS } from "../app/features/sound/soundConfig";
+import type { SoundPlan } from "../app/features/sound/soundPlan";
+import SoundStaff from "../app/features/sound/visual/SoundStaff";
 
 const animation = vi.hoisted(() => ({
     fromTo: vi.fn(),

@@ -1,8 +1,8 @@
 import { Link } from "react-router";
 import PageHeader from "../components/PageHeader";
-import { PATHS } from "../config";
-import { visibleChannels } from "../managers/channels";
-import { useAccount } from "../managers/useAccount";
+import { PATHS } from "../shared/config";
+import { visibleChannels } from "../features/channels/channels";
+import { useAccount } from "../features/auth/useAccount";
 
 export default function Home() {
     const { account, loading, error } = useAccount();

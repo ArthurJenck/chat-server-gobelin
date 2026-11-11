@@ -1,6 +1,5 @@
-import { getMessages, sendMessage, type Account, type Message } from "../api";
-import { KEY_CHANNEL_NAME, NAMESPACE, PARIS_TIME_ZONE } from "../config";
-import { createOrEnterChannel } from "./channels";
+import { NAMESPACE, PARIS_TIME_ZONE } from "../../shared/config";
+import type { Message } from "../messages/types";
 
 export type KeyState = { holderId: number | null; holderName: string | null };
 
@@ -48,36 +47,4 @@ export function keyStateFromMessages(
     )
         return { holderId: null, holderName: null };
     return { holderId: latest.user_id, holderName: latest.user };
-}
-
-export async function ensureKeyChannel(account: Account) {
-    return (
-        account.channels?.find(
-            (channel) => channel.name === KEY_CHANNEL_NAME,
-        ) ?? createOrEnterChannel(KEY_CHANNEL_NAME)
-    );
-}
-
-export async function readKeyState(channelId: number) {
-    return keyStateFromMessages(await getMessages(channelId));
-}
-
-export async function toggleKeyState(
-    channelId: number,
-    account: Account,
-    expected: KeyState,
-) {
-    const current = await readKeyState(channelId);
-    if (
-        current.holderId !== expected.holderId ||
-        (current.holderId !== null && current.holderId !== account.id)
-    )
-        return current;
-    const action = current.holderId === null ? "claim" : "release";
-    await sendMessage(
-        channelId,
-        action === "claim" ? "Clé récupérée" : "Clé remise",
-        { type: "classroom_key", action },
-    );
-    return readKeyState(channelId);
 }

@@ -3,18 +3,18 @@ import {
     DEFAULT_SOUND_SETTINGS,
     INSTRUMENTS,
     withInstrumentProfile,
-} from "../app/sound/soundConfig";
+} from "../app/features/sound/soundConfig";
 import {
     createSoundPlan,
     getScaleDegree,
     segmentText,
-} from "../app/sound/soundPlan";
+} from "../app/features/sound/soundPlan";
 import {
     parsePreset,
     readSavedInstrumentProfiles,
     saveInstrumentProfiles,
     serializePreset,
-} from "../app/sound/soundPreset";
+} from "../app/features/sound/soundPreset";
 
 describe("sound workshop", () => {
     it("starts each instrument in its own register and articulation", () => {
@@ -99,12 +99,15 @@ describe("sound workshop", () => {
     });
 
     it("reserves time for the last note when shortening a long phrase", () => {
-        const settings = withInstrumentProfile(DEFAULT_SOUND_SETTINGS, "flute");
+        const settings = {
+            ...withInstrumentProfile(DEFAULT_SOUND_SETTINGS, "flute"),
+            speedMode: "fixed" as const,
+        };
         const plan = createSoundPlan("la ".repeat(100), settings);
 
         expect(
             plan.events.at(-1)!.start + INSTRUMENTS.flute.lastDuration + 1.6,
-        ).toBeLessThanOrEqual(settings.maxDuration);
+        ).toBeCloseTo(settings.maxDuration);
     });
 
     it("saves each instrument adjustment independently", () => {
@@ -135,6 +138,56 @@ describe("sound workshop", () => {
             plan.events.every(
                 (event, index) =>
                     index === 0 || event.start >= plan.events[index - 1].start,
+            ),
+        ).toBe(true);
+    });
+
+    it("preserves large note and word pauses in adaptive mode", () => {
+        const settings = {
+            ...DEFAULT_SOUND_SETTINGS,
+            speedMode: "length" as const,
+            lengthFactor: 0,
+            intervalMs: 1000,
+            wordGap: 2000,
+        };
+        const plan = createSoundPlan("Coucou les gars ça va", settings);
+        const gaps = plan.events
+            .slice(1)
+            .map((event, index) => event.start - plan.events[index].start);
+
+        expect(gaps[0]).toBeCloseTo(1.02);
+        expect(
+            gaps.slice(1).every((gap) => Math.abs(gap - 3) < 0.000001),
+        ).toBe(true);
+        expect(plan.events.at(-1)!.start).toBeGreaterThan(settings.maxDuration);
+    });
+
+    it("changes density smoothly as pauses grow in fixed mode", () => {
+        const settings = {
+            ...DEFAULT_SOUND_SETTINGS,
+            speedMode: "fixed" as const,
+        };
+        const plans = [500, 600, 700, 800, 900].map((wordGap) =>
+            createSoundPlan("la la la la la la la la la la", {
+                ...settings,
+                wordGap,
+            }),
+        );
+        const densities = plans.map((plan) => plan.density);
+
+        expect(
+            densities.every(
+                (density, index) =>
+                    index === 0 || density <= densities[index - 1] + 0.000001,
+            ),
+        ).toBe(true);
+        expect(
+            plans.every(
+                (plan) =>
+                    plan.events.at(-1)!.start +
+                        INSTRUMENTS.piano.lastDuration +
+                        1.6 <=
+                    settings.maxDuration + 0.000001,
             ),
         ).toBe(true);
     });

@@ -347,10 +347,10 @@ export function createSoundPlan(
         (settings.intervalMs * settings.gate) / 1000,
     );
     const onsetBudget = Math.max(0.1, settings.maxDuration - finalHold - 1.6);
-    const requiredScale = (rawTicks * RHYTHM_TICK_MS) / (onsetBudget * 1000);
     const tickMs =
-        RHYTHM_TICK_MS /
-        2 ** Math.max(0, Math.ceil(Math.log2(Math.max(1, requiredScale))));
+        settings.speedMode === "fixed" && rawTicks > 0
+            ? Math.min(RHYTHM_TICK_MS, (onsetBudget * 1000) / rawTicks)
+            : RHYTHM_TICK_MS;
     const starts = [0];
     for (const gap of gaps) starts.push(starts.at(-1)! + (gap * tickMs) / 1000);
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { login, register, setToken } from "../api";
+import { login, register } from "../features/auth/api";
+import { setToken } from "../features/auth/token";
 
 export default function Register() {
     const navigate = useNavigate();

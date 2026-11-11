@@ -2,14 +2,17 @@ import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import { renderApp } from "./render-app";
-import { DEFAULT_SOUND_SETTINGS, INSTRUMENTS } from "../app/sound/soundConfig";
+import {
+    DEFAULT_SOUND_SETTINGS,
+    INSTRUMENTS,
+} from "../app/features/sound/soundConfig";
 import {
     saveInstrumentProfiles,
     serializePreset,
-} from "../app/sound/soundPreset";
+} from "../app/features/sound/soundPreset";
 
 const playback = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn() }));
-vi.mock("../app/sound/audioEngine", () => ({
+vi.mock("../app/features/sound/audioEngine", () => ({
     startPlayback: playback.start,
 }));
 

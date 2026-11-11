@@ -1,10 +1,10 @@
 import { Link, useNavigate } from "react-router";
-import { clearToken } from "../api";
+import { clearToken } from "../features/auth/token";
 import PageHeader from "../components/PageHeader";
-import { PATHS } from "../config";
-import { accountInstrument } from "../managers/profile";
-import { useAccount } from "../managers/useAccount";
-import { INSTRUMENTS } from "../sound/soundConfig";
+import { PATHS } from "../shared/config";
+import { accountInstrument } from "../features/users/instrument";
+import { useAccount } from "../features/auth/useAccount";
+import { INSTRUMENTS } from "../features/sound/soundConfig";
 
 export default function Profile() {
     const navigate = useNavigate();

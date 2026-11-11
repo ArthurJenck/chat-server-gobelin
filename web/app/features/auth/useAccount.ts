@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { ApiError, getAccount, getToken, type Account } from "../api";
-import { PATHS } from "../config";
-import { accountInstrument } from "./profile";
+import { PATHS } from "../../shared/config";
+import { ApiError } from "../../shared/http/ApiError";
+import { getAccount } from "../users/api";
+import { accountInstrument } from "../users/instrument";
+import type { Account } from "../users/types";
+import { getToken } from "./token";
 
 export function useAccount(requireInstrument = true) {
     const navigate = useNavigate();

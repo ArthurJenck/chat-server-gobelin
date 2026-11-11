@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createArrangement } from "../app/sound/arrangement";
-import { DEFAULT_SOUND_SETTINGS } from "../app/sound/soundConfig";
-import type { SoundPlan } from "../app/sound/soundPlan";
+import { createArrangement } from "../app/features/sound/arrangement";
+import { DEFAULT_SOUND_SETTINGS } from "../app/features/sound/soundConfig";
+import type { SoundPlan } from "../app/features/sound/soundPlan";
 
 const plan: SoundPlan = {
     tonicMidi: 60,

@@ -1,4 +1,4 @@
-import type { KeyState } from "../managers/key";
+import type { KeyState } from "./keyState";
 
 export default function KeyControl({
     state,

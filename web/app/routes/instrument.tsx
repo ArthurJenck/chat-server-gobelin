@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import PageHeader from "../components/PageHeader";
-import { PATHS } from "../config";
-import { accountInstrument, saveInstrument } from "../managers/profile";
-import { useAccount } from "../managers/useAccount";
-import { INSTRUMENTS, type Instrument } from "../sound/soundConfig";
+import { PATHS } from "../shared/config";
+import {
+    accountInstrument,
+    saveInstrument,
+} from "../features/users/instrument";
+import { useAccount } from "../features/auth/useAccount";
+import { INSTRUMENTS, type Instrument } from "../features/sound/soundConfig";
 
 export default function InstrumentPage() {
     const navigate = useNavigate();

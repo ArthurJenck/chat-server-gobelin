@@ -2,13 +2,15 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Account } from "../app/api";
-import { keyStateFromMessages } from "../app/managers/key";
+import type { Account } from "../app/features/users/types";
+import { keyStateFromMessages } from "../app/features/key/keyState";
 import { renderApp } from "./render-app";
 import { server } from "./setup";
 
 const playback = vi.hoisted(() => ({ start: vi.fn() }));
-vi.mock("../app/sound/audioEngine", () => ({ startPlayback: playback.start }));
+vi.mock("../app/features/sound/audioEngine", () => ({
+    startPlayback: playback.start,
+}));
 
 const api = "http://localhost:4000";
 const general = {

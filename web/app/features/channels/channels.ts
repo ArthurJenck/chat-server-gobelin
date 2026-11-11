@@ -1,5 +1,6 @@
-import { createChannel, enterChannel, type Account } from "../api";
-import { KEY_CHANNEL_NAME } from "../config";
+import { KEY_CHANNEL_NAME } from "../../shared/config";
+import type { Account } from "../users/types";
+import { createChannel, enterChannel } from "./api";
 
 export function visibleChannels(account: Account) {
     return (account.channels ?? []).filter(

@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
-import { DEFAULT_SOUND_SETTINGS } from "../app/sound/soundConfig";
-import type { SoundPlan } from "../app/sound/soundPlan";
-import { layoutSoundStaff } from "../app/sound/visual/staffLayout";
+import { DEFAULT_SOUND_SETTINGS } from "../app/features/sound/soundConfig";
+import type { SoundPlan } from "../app/features/sound/soundPlan";
+import { layoutSoundStaff } from "../app/features/sound/visual/staffLayout";
 
 const plan: SoundPlan = {
     tonicMidi: 60,

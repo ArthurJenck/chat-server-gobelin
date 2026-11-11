@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Message } from "../api";
-import { messageInstrument } from "../managers/profile";
+import type { Message } from "../messages/types";
 import { startPlayback } from "../sound/audioEngine";
 import {
     DEFAULT_SOUND_SETTINGS,
     withInstrumentProfile,
 } from "../sound/soundConfig";
 import { createSoundPlan } from "../sound/soundPlan";
+import { messageInstrument } from "./messageSound";
 
 export default function MessageItem({
     message,
