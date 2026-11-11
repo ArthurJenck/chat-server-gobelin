@@ -9,19 +9,22 @@ import (
 	"chat-gobelin-api/internal"
 	"chat-gobelin-api/internal/users"
 	"chat-gobelin-api/internal/channels"
+	"chat-gobelin-api/internal/websockets"
 
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type userHandler struct {
+	hub *websockets.BroadcastHub
 	userRepo users.Repo
 	channelRepo channels.Repo
 	general channels.Channel
 }
 
-func NewUserHandler(s users.Repo, c channels.Repo, channel channels.Channel) (*userHandler, error) {
+func NewUserHandler(h *websockets.BroadcastHub, s users.Repo, c channels.Repo, channel channels.Channel) (*userHandler, error) {
 	return &userHandler{
+		hub: h,
 		userRepo: s,
 		channelRepo: c,
 		general: channel,

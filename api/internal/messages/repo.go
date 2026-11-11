@@ -33,6 +33,7 @@ func NewRepo(db *sqlx.DB) (Repo, error) {
 func (r *repo) GetByChannel(ctx context.Context, channel channels.Channel) ([]Message, error) {
 	query := `SELECT
 			a.id,
+			a.channel_id,
 			a.content,
 			a.user_id,
 			a.creation_date,
@@ -73,6 +74,7 @@ func (r *repo) GetByChannel(ctx context.Context, channel channels.Channel) ([]Me
 func (r *repo) GetByID(ctx context.Context, id int64) (*Message, error) {
 	query := `SELECT
 			a.id,
+			a.channel_id,
 			a.content,
 			a.user_id,
 			a.creation_date,
@@ -92,9 +94,11 @@ func (r *repo) GetByID(ctx context.Context, id int64) (*Message, error) {
 	}
 
 	var metadata map[string]json.RawMessage
-	err = json.Unmarshal(message.RawMetadata, &metadata)
-	if err != nil {
-		return &message, fmt.Errorf("Error unmarshaling metadata: %w", err)
+	if len(message.RawMetadata) > 0 {
+		err = json.Unmarshal(message.RawMetadata, &metadata)
+		if err != nil {
+			return &message, fmt.Errorf("Error unmarshaling metadata: %w", err)
+		}
 	}
 	message.Metadata = metadata
 
@@ -106,7 +110,7 @@ func (r *repo) Create(ctx context.Context, content string, rawMetadata json.RawM
 	if createdAt == nil {
 		query := `INSERT INTO messages
 			(content, metadata, user_id, channel_id, anonymous, posted_at, creation_date) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
-			RETURNING id, content, user_id, anonymous, posted_at, creation_date`
+			RETURNING id, channel_id, content, user_id, anonymous, posted_at, creation_date`
 
 		query = r.db.Rebind(query)
 		err := r.db.GetContext(ctx, &message, query, content, rawMetadata, user.ID, channel.ID, anonymous)
@@ -116,7 +120,7 @@ func (r *repo) Create(ctx context.Context, content string, rawMetadata json.RawM
 	} else {
 		query := `INSERT INTO messages
 			(content, metadata, user_id, channel_id, anonymous, posted_at, creation_date) VALUES (?, ?, ?, ?, ?, ?, NOW())
-			RETURNING id, content, user_id, anonymous, posted_at, creation_date`
+			RETURNING id, channel_id, content, user_id, anonymous, posted_at, creation_date`
 
 		query = r.db.Rebind(query)
 		err := r.db.GetContext(ctx, &message, query, content, rawMetadata, user.ID, channel.ID, anonymous, createdAt)
@@ -144,7 +148,7 @@ func (r *repo) Edit(ctx context.Context, message Message, content string, rawMet
 		query := `UPDATE messages SET
 			metadata = ?
 			WHERE id = ?
-			RETURNING id, content, metadata`
+			RETURNING id, channel_id, content, metadata`
 		query = r.db.Rebind(query)
 		err := r.db.GetContext(ctx, &editedMessage, query, []byte(rawMetadata), message.ID)
 		if err != nil {
@@ -154,7 +158,7 @@ func (r *repo) Edit(ctx context.Context, message Message, content string, rawMet
 		query := `UPDATE messages SET
 			content = ?
 			WHERE id = ?
-			RETURNING id, content, metadata`
+			RETURNING id, channel_id, content, metadata`
 		query = r.db.Rebind(query)
 		err := r.db.GetContext(ctx, &editedMessage, query, content, message.ID)
 		if err != nil {
@@ -165,7 +169,7 @@ func (r *repo) Edit(ctx context.Context, message Message, content string, rawMet
 			content = ?,
 			metadata = ?
 			WHERE id = ?
-			RETURNING id, content, metadata`
+			RETURNING id, channel_id, content, metadata`
 		query = r.db.Rebind(query)
 		err := r.db.GetContext(ctx, &editedMessage, query, content, []byte(rawMetadata), message.ID)
 		if err != nil {
