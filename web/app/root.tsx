@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Route } from "./+types/root";
 import InstallPrompt from "./InstallPrompt";
+import "./tokens.css";
 
 export const links: Route.LinksFunction = () => [
     { rel: "manifest", href: "/manifest.webmanifest" },

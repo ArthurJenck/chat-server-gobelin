@@ -1,0 +1,84 @@
+/* --- Font --- */
+@font-face {
+    font-family: "Angeris Disco";
+    src: url("/fonts/angeris-disco.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 400;
+}
+
+:root {
+    /* --- Base colors --- */
+    --color-background: #fffef3;
+    --color-ink: #000000;
+
+    /* --- Musical scales --- */
+    --color-key-do-major: #4df8e7;
+    --color-key-do-minor: #ff0004;
+
+    --color-key-do-diese-major: #ffa200;
+    --color-key-do-diese-minor: #a200c6;
+
+    --color-key-re-major: #ffff0a;
+    --color-key-re-minor: #1829e1;
+
+    --color-key-re-diese-major: #00d9bc;
+    --color-key-re-diese-minor: #ff00a6;
+
+    --color-key-mi-major: #25ca63;
+    --color-key-mi-minor: #823f17;
+
+    --color-key-fa-major: #7dfd48;
+    --color-key-fa-minor: #4c74f9;
+
+    --color-key-fa-diese-major: #ffd146;
+    --color-key-fa-diese-minor: #4cf9c3;
+
+    --color-key-sol-major: #c95d26;
+    --color-key-sol-minor: #5c22cd;
+
+    --color-key-sol-diese-major: #8bd9fe;
+    --color-key-sol-diese-minor: #ffaae1;
+
+    --color-key-la-major: #9502c5;
+    --color-key-la-minor: #ff4646;
+
+    --color-key-la-diese-major: #99c100;
+    --color-key-la-diese-minor: #018ec0;
+
+    --color-key-si-major: #2300c1;
+    --color-key-si-minor: #c11a00;
+
+    /* --- Typeface --- */
+    --font-family-interface: "Angeris Disco";
+    --font-family-message: "Times New Roman";
+    --font-style-interface: italic;
+    --font-weight-message: 700;
+    --font-size-group-title: 20px;
+    --font-size-username: 15px;
+    --font-size-message-body: 16px;
+    --font-size-message-input: 16px;
+    --letter-spacing-text: 0;
+
+    /* --- Chat effects --- */
+    --opacity-chat-halo: 0.2;
+    --opacity-chat-gradient: 0.15;
+    --reference-chat-halo-width: 70px;
+    --reference-chat-halo-height: 50px;
+    --reference-chat-gradient-height: 163px;
+
+    /* --- Sound staff --- */
+    --reference-staff-width: 360px;
+    --reference-staff-height: 40px;
+    --reference-staff-line-width: 1px;
+    --reference-staff-line-gap: 10px;
+    --reference-staff-blur: 4px;
+    --reference-dotted-line-width: 0.4px;
+
+    /* --- Pictos --- */
+    --opacity-icon-crisp: 1;
+    --opacity-icon-blurred-arrow-key: 0.5;
+    --opacity-icon-blurred-coda: 0.6;
+    --reference-icon-blur: 4px;
+    --reference-coda-small-height: 10px;
+    --reference-coda-large-height: 40px;
+}
