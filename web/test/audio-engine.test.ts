@@ -21,6 +21,7 @@ vi.mock("smplr", () => ({
 
 const close = vi.fn(async () => {});
 const connect = vi.fn();
+const gains: Array<{ setValueAtTime: ReturnType<typeof vi.fn> }> = [];
 
 class AudioContextStub {
     currentTime = 0;
@@ -34,7 +35,7 @@ class AudioContextStub {
     });
     close = close;
     createGain() {
-        return {
+        const node = {
             gain: {
                 value: 0,
                 cancelScheduledValues: vi.fn(),
@@ -42,6 +43,8 @@ class AudioContextStub {
             },
             connect,
         };
+        gains.push(node.gain);
+        return node;
     }
     createBiquadFilter() {
         return {
@@ -68,6 +71,7 @@ const plan: SoundPlan = {
 };
 
 beforeEach(() => {
+    gains.length = 0;
     vi.useFakeTimers();
     vi.stubGlobal("AudioContext", AudioContextStub);
     vi.stubGlobal("caches", {});
@@ -77,6 +81,25 @@ beforeEach(() => {
         stop: sampler.stop,
         dispose: sampler.dispose,
     });
+});
+
+it("mutes the output for the full written rest", async () => {
+    const paused: SoundPlan = {
+        tonicMidi: 60,
+        density: 1,
+        noteStep: 0.2,
+        events: [
+            { text: "la", wordId: 0, start: 0, midi: 60 },
+            { text: ".", wordId: null, start: 0.2, midi: null, rest: "half" },
+            { text: "la", wordId: 1, start: 0.6, midi: 62 },
+        ],
+    };
+    const stop = await startPlayback(paused, DEFAULT_SOUND_SETTINGS, vi.fn());
+    expect(gains[0].setValueAtTime.mock.calls[0][0]).toBe(0);
+    expect(gains[0].setValueAtTime.mock.calls[0][1]).toBeCloseTo(0.24);
+    expect(gains[0].setValueAtTime.mock.calls[1][0]).toBe(DEFAULT_SOUND_SETTINGS.volume);
+    expect(gains[0].setValueAtTime.mock.calls[1][1]).toBeCloseTo(0.64);
+    stop();
 });
 
 afterEach(() => {

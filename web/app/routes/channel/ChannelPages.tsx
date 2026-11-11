@@ -2,15 +2,18 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MessageItem from "../../features/chat/MessageItem";
-import { buildChannelStaffs, paginateChannelStaffs } from "../../features/chat/channelPagination";
+import { applyPageMusicKeys, buildChannelStaffs, paginateChannelStaffs } from "../../features/chat/channelPagination";
+import { DEFAULT_MUSIC_KEY, musicColor, type MusicKey } from "../../features/chat/conversationMusic";
 import type { Message } from "../../features/messages/types";
 
 export default function ChannelPages({
     messages,
     userId,
+    onKeyChange,
 }: {
     messages: Message[];
     userId: number | null;
+    onKeyChange: (key: MusicKey) => void;
 }) {
     const scroller = useRef<HTMLElement>(null);
     const sheets = useRef<(HTMLOListElement | null)[]>([]);
@@ -18,7 +21,13 @@ export default function ChannelPages({
     const [size, setSize] = useState({ width: 360, height: 600 });
     const [activePage, setActivePage] = useState(0);
     const blocks = useMemo(() => buildChannelStaffs(messages, size.width), [messages, size.width]);
-    const pages = useMemo(() => paginateChannelStaffs(blocks, size.height), [blocks, size.height]);
+    const pages = useMemo(() => applyPageMusicKeys(
+        paginateChannelStaffs(blocks, size.height), size.width,
+    ), [blocks, size.height, size.width]);
+
+    useEffect(() => {
+        onKeyChange(pages[activePage]?.at(-1)?.pageKey ?? DEFAULT_MUSIC_KEY);
+    }, [activePage, onKeyChange, pages]);
 
     useEffect(() => {
         setActivePage((current) => Math.min(current, pages.length - 1));
@@ -149,7 +158,9 @@ export default function ChannelPages({
                             key={page.map((block) => block.key).join("|") || "empty"}
                             ref={(node) => { sheets.current[pageIndex] = node; }}
                             className="channel-sheet"
-                            style={{ zIndex: pages.length - pageIndex }}
+                            style={{ zIndex: pages.length - pageIndex,
+                                "--channel-key-color": musicColor(page.at(-1)?.pageKey ?? DEFAULT_MUSIC_KEY),
+                            } as React.CSSProperties}
                             aria-hidden={pageIndex !== activePage}
                             inert={pageIndex !== activePage}
                         >

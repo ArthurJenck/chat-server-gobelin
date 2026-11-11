@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Route } from "./+types/root";
 import RegistrationProvider from "./features/auth/RegistrationContext";
+import ConversationMonitor from "./features/chat/ConversationMonitor";
 import "./tokens.css";
 
 export const links: Route.LinksFunction = () => [
@@ -83,6 +84,7 @@ export default function App() {
                 </p>
             )}
             <RegistrationProvider>
+                <ConversationMonitor />
                 <Outlet />
             </RegistrationProvider>
         </>

@@ -252,9 +252,9 @@ describe("Harmonie", () => {
         await waitFor(() => expect(sent).toEqual({
             channel: 7,
             content: "Bonjour",
-            metadata: { instrument: "guitar" },
+            metadata: { instrument: "guitar", music_root: 0, music_mode: "major" },
         }));
-        expect(requestedChannels.every((id) => id === "7")).toBe(true);
+        expect(requestedChannels).not.toContain("9");
         expect(keyChannelCreates).toBe(0);
     });
 
@@ -313,7 +313,7 @@ describe("Harmonie", () => {
         expect(sent).toEqual({
             channel: 5,
             content: "Salut",
-            metadata: { instrument: "guitar" },
+            metadata: { instrument: "guitar", music_root: 0, music_mode: "major" },
         });
     });
 

@@ -110,7 +110,15 @@ export default function SoundStaff({
                                 opacity: 0,
                             }}
                         >
-                            {group.text}
+                            {group.rest ? (
+                                <img
+                                    src={group.rest === "quarter" ? "/pictos/breath.svg" : "/pictos/silence.svg"}
+                                    alt=""
+                                    width={group.rest === "quarter" ? 10 : 15}
+                                    height={group.rest === "quarter" ? 23 : 5}
+                                    style={{ display: "block" }}
+                                />
+                            ) : group.text}
                         </span>
                     ))}
                 </div>

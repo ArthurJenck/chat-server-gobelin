@@ -3,6 +3,12 @@ import { withInstrumentProfile, DEFAULT_SOUND_SETTINGS } from "../sound/soundCon
 import { createSoundPlan, type SoundPlan } from "../sound/soundPlan";
 import { layoutSoundStaff } from "../sound/visual/staffLayout";
 import { messageInstrument } from "./messageSound";
+import {
+    DEFAULT_MUSIC_KEY,
+    isConversationRest,
+    messageMusicKey,
+    type MusicKey,
+} from "./conversationMusic";
 
 export const CHANNEL_STAFF_WIDTH = 360;
 export const CHANNEL_STAFF_HEIGHT = 40;
@@ -24,53 +30,61 @@ export type ChannelStaffBlock = {
     plan: SoundPlan;
     row: ReturnType<typeof layoutSoundStaff>["rows"][number];
     first: boolean;
+    rowIndex: number;
+    musicKey: MusicKey;
+    pageKey: MusicKey;
 };
-
-function displayPlan(message: Message, plan: SoundPlan): SoundPlan {
-    const words = [...new Intl.Segmenter("fr", { granularity: "word" }).segment(message.content)]
-        .filter((part) => part.isWordLike);
-    if (!plan.events.length && message.content.trim())
-        return {
-            ...plan,
-            events: [{ text: message.content.trim(), wordId: null, start: 0, midi: null }],
-        };
-    const events = plan.events.map((event) => ({ ...event }));
-    if (words[0] && events[0])
-        events[0].text = message.content.slice(0, words[0].index).trim() + events[0].text;
-    for (let wordIndex = 0; wordIndex < words.length; wordIndex += 1) {
-        let finalEvent = -1;
-        for (let index = 0; index < events.length; index += 1)
-            if (events[index].wordId === wordIndex) finalEvent = index;
-        if (finalEvent === -1) continue;
-        const end = words[wordIndex].index + words[wordIndex].segment.length;
-        const next = words[wordIndex + 1]?.index ?? message.content.length;
-        events[finalEvent].text += message.content.slice(end, next).trim();
-    }
-    return { ...plan, events };
-}
 
 export function buildChannelStaffs(messages: Message[], availableWidth: number) {
     const width = Math.min(CHANNEL_STAFF_WIDTH, Math.max(1, availableWidth));
+    let musicKey = DEFAULT_MUSIC_KEY;
     return [...messages]
         .sort((left, right) =>
             Date.parse(left.creation_date) - Date.parse(right.creation_date) ||
             (left.id ?? 0) - (right.id ?? 0),
         )
         .flatMap((message, messageIndex) => {
+            musicKey = messageMusicKey(message) ?? musicKey;
             const settings = withInstrumentProfile(
-                CHANNEL_SOUND_SETTINGS,
+                { ...CHANNEL_SOUND_SETTINGS, ...musicKey },
                 messageInstrument(message),
             );
-            const plan = createSoundPlan(message.content, settings);
-            const rows = layoutSoundStaff(displayPlan(message, plan), settings, Math.max(1, width - 40)).rows;
+            const silent = isConversationRest(message);
+            const plan: SoundPlan = silent
+                ? { events: [{ text: "", wordId: null, start: 0, midi: null, rest: "whole" }],
+                    tonicMidi: 12 * (settings.octave + 1) + musicKey.root, density: 0,
+                    noteStep: settings.intervalMs / 1000 }
+                : createSoundPlan(message.content, settings);
+            const rows = layoutSoundStaff(plan, settings, Math.max(1, width - 40)).rows;
             return rows.filter((row) => row.length).map((row, rowIndex) => ({
                 key: `${message.id ?? `${message.creation_date}-${message.user_id}-${messageIndex}`}-${rowIndex}`,
                 message,
                 plan,
-                row: row.map((group) => ({ ...group, x: group.x + 20 })),
-                first: rowIndex === 0,
+                row: row.map((group) => ({ ...group, x: silent ? width / 2 - 7.5 : group.x + 20 })),
+                first: rowIndex === 0 && !silent,
+                rowIndex,
+                musicKey,
+                pageKey: musicKey,
             }));
         });
+}
+
+export function applyPageMusicKeys(pages: ChannelStaffBlock[][], availableWidth: number) {
+    const width = Math.min(CHANNEL_STAFF_WIDTH, Math.max(1, availableWidth));
+    return pages.map((page) => {
+        const pageKey = page.at(-1)?.musicKey ?? DEFAULT_MUSIC_KEY;
+        return page.map((block) => {
+            if (isConversationRest(block.message)) return { ...block, pageKey };
+            const settings = withInstrumentProfile(
+                { ...CHANNEL_SOUND_SETTINGS, ...pageKey },
+                messageInstrument(block.message),
+            );
+            const plan = createSoundPlan(block.message.content, settings);
+            const row = layoutSoundStaff(plan, settings, Math.max(1, width - 40))
+                .rows[block.rowIndex]?.map((group) => ({ ...group, x: group.x + 20 })) ?? [];
+            return { ...block, pageKey, plan, row };
+        });
+    });
 }
 
 export function paginateChannelStaffs(

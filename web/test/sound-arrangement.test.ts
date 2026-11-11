@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createArrangement } from "../app/features/sound/arrangement";
 import { DEFAULT_SOUND_SETTINGS } from "../app/features/sound/soundConfig";
-import type { SoundPlan } from "../app/features/sound/soundPlan";
+import { createSoundPlan, type SoundPlan } from "../app/features/sound/soundPlan";
 
 const plan: SoundPlan = {
     tonicMidi: 60,
@@ -25,6 +25,19 @@ function harmonyAt(start: number, settings: typeof DEFAULT_SOUND_SETTINGS) {
 }
 
 describe("sound arrangement", () => {
+    it("ends melody and sustained chords before a rest", () => {
+        const settings = { ...DEFAULT_SOUND_SETTINGS,
+            chordPlacement: "above" as const, chordRhythm: "sustain" as const };
+        const paused = createSoundPlan("la, la.", settings);
+        const firstRest = paused.events.find((event) => event.rest === "quarter")!;
+        const notes = createArrangement(paused, settings);
+        expect(notes.filter((note) => note.start < firstRest.start)
+            .every((note) => note.start + note.duration <= firstRest.start)).toBe(true);
+        const lastRest = paused.events.at(-1)!;
+        expect(lastRest.rest).toBe("half");
+        expect(notes.every((note) => note.start < lastRest.start &&
+            note.start + note.duration <= lastRest.start)).toBe(true);
+    });
     it("builds the first and last chords in the message scale", () => {
         const settings = {
             ...DEFAULT_SOUND_SETTINGS,

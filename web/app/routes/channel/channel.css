@@ -24,12 +24,12 @@
 
 .channel-page::before {
     top: 0;
-    background: linear-gradient(to bottom, rgb(77 248 231 / 15%), transparent);
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--channel-key-color) 15%, transparent), transparent);
 }
 
 .channel-page::after {
     bottom: 0;
-    background: linear-gradient(to top, rgb(77 248 231 / 15%), transparent);
+    background: linear-gradient(to top, color-mix(in srgb, var(--channel-key-color) 15%, transparent), transparent);
 }
 
 .channel-header {
@@ -203,6 +203,10 @@
     text-align: left;
 }
 
+.channel-staff:disabled {
+    cursor: default;
+}
+
 .channel-staff-lines {
     position: absolute;
     inset: 0;
@@ -259,12 +263,20 @@
     height: 50px;
     background: radial-gradient(
         ellipse,
-        rgb(77 248 231 / 20%),
+        color-mix(in srgb, var(--channel-key-color) 20%, transparent),
         transparent 70%
     );
     content: "";
     pointer-events: none;
     transform: translate(-50%, -50%);
+}
+
+.channel-rest::before {
+    content: none;
+}
+
+.channel-rest img {
+    display: block;
 }
 
 .channel-empty {

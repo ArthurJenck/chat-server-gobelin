@@ -24,6 +24,7 @@ function noteDuration(
                   Math.max(0.001, nextStart - plan.events[index].start),
               );
     const active = Math.max(0.001, span * settings.gate);
+    if (plan.events[index + 1]?.rest) return active;
     return index === lastIndex
         ? Math.max(active, INSTRUMENTS[settings.instrument].lastDuration)
         : active;
@@ -87,7 +88,7 @@ export function createArrangement(
             add(
                 event.endingMidi,
                 event.start + ornamentDelay,
-                Math.max(0.05, duration - ornamentDelay),
+                Math.max(0.001, duration - ornamentDelay),
                 event.velocity ?? 90,
             );
         }
@@ -117,37 +118,36 @@ export function createArrangement(
     }
 
     if (settings.chordPlacement !== "off") {
-        const first = plan.events[firstIndex];
-        const last = plan.events[lastIndex];
         const addChord = (root: number, start: number, duration: number) => {
             for (const note of chordTones(root, plan, settings)) {
                 add(note, start, duration, settings.harmonyVelocity);
             }
         };
-        if (settings.chordRhythm === "retrigger") {
-            for (const index of noteIndexes.slice(0, -1)) {
-                const event = plan.events[index];
-                addChord(
-                    plan.tonicMidi,
-                    event.start,
-                    noteDuration(plan, index, lastIndex, settings),
-                );
+        const segments: number[][] = [[]];
+        plan.events.forEach((event, index) => {
+            if (event.rest && segments.at(-1)!.length) segments.push([]);
+            else if (event.midi !== null) segments.at(-1)!.push(index);
+        });
+        for (const indexes of segments.filter((segment) => segment.length)) {
+            const segmentFirst = indexes[0];
+            const segmentLast = indexes.at(-1)!;
+            const first = plan.events[segmentFirst];
+            const last = plan.events[segmentLast];
+            if (settings.chordRhythm === "retrigger") {
+                for (const index of indexes.slice(0, -1)) {
+                    const event = plan.events[index];
+                    addChord(plan.tonicMidi, event.start,
+                        noteDuration(plan, index, segmentLast, settings));
+                }
+            } else if (segmentFirst !== segmentLast) {
+                const duration = settings.chordRhythm === "sustain"
+                    ? Math.max(noteDuration(plan, segmentFirst, segmentLast, settings), last.start - first.start)
+                    : noteDuration(plan, segmentFirst, segmentLast, settings);
+                addChord(plan.tonicMidi, first.start, duration);
             }
-        } else if (firstIndex !== lastIndex) {
-            const duration =
-                settings.chordRhythm === "sustain"
-                    ? Math.max(
-                          noteDuration(plan, firstIndex, lastIndex, settings),
-                          last.start - first.start,
-                      )
-                    : noteDuration(plan, firstIndex, lastIndex, settings);
-            addChord(plan.tonicMidi, first.start, duration);
+            addChord(plan.tonicMidi, last.start,
+                noteDuration(plan, segmentLast, segmentLast, settings));
         }
-        addChord(
-            plan.tonicMidi,
-            last.start,
-            noteDuration(plan, lastIndex, lastIndex, settings),
-        );
     }
 
     return notes.sort(

@@ -8,6 +8,7 @@ export type TextGroup = { text: string; wordId: number | null };
 export type SoundEvent = TextGroup & {
     start: number;
     midi: number | null;
+    rest?: "quarter" | "half" | "whole";
     endingMidi?: number;
     velocity?: number;
 };
@@ -198,12 +199,52 @@ function splitWord(word: string, wordId: number): Syllable[] {
 function splitWords(text: string): Word[] {
     return [...new Intl.Segmenter("fr", { granularity: "word" }).segment(text)]
         .filter((part) => part.isWordLike)
-        .map((part, wordId) => ({
-            text: part.segment,
-            start: part.index,
-            end: part.index + part.segment.length,
-            syllables: splitWord(part.segment, wordId),
+        .flatMap((part) => {
+            const pieces = part.segment.split(/([,.])/);
+            let offset = part.index;
+            return pieces.flatMap((piece) => {
+                const start = offset;
+                offset += piece.length;
+                return !piece || piece === "," || piece === "."
+                    ? []
+                    : [{ text: piece, start, end: offset }];
+            });
+        })
+        .map((word, wordId) => ({ ...word,
+            syllables: splitWord(word.text, wordId),
         }));
+}
+
+function punctuationParts(text: string, words: Word[]) {
+    const rests: { after: number; kind: "quarter" | "half" }[] = [];
+    const display: string[] = [];
+    let cursor = 0;
+    let lastSyllable = -1;
+    for (const word of words) {
+        const gap = text.slice(cursor, word.start);
+        for (const char of gap) {
+            if (char === "," || char === ".")
+                rests.push({ after: lastSyllable, kind: char === "," ? "quarter" : "half" });
+        }
+        const other = gap.replace(/[,.\s]/g, "");
+        if (other) {
+            if (lastSyllable >= 0) display[lastSyllable] += other;
+            else display[0] = other + (display[0] ?? "");
+        }
+        for (const syllable of word.syllables) {
+            lastSyllable += 1;
+            display[lastSyllable] = (display[lastSyllable] ?? "") + syllable.text;
+        }
+        cursor = word.end;
+    }
+    const tail = text.slice(cursor);
+    for (const char of tail) {
+        if (char === "," || char === ".")
+            rests.push({ after: lastSyllable, kind: char === "," ? "quarter" : "half" });
+    }
+    const other = tail.replace(/[,.\s]/g, "");
+    if (other && lastSyllable >= 0) display[lastSyllable] += other;
+    return { rests, display, orphan: lastSyllable < 0 ? other : "" };
 }
 
 export function segmentText(text: string): TextGroup[] {
@@ -306,8 +347,14 @@ export function createSoundPlan(
 ): SoundPlan {
     const words = splitWords(text);
     const groups = words.flatMap((word) => word.syllables);
+    const { rests, display, orphan } = punctuationParts(text, words);
     const tonicMidi = 12 * (settings.octave + 1) + settings.root;
-    if (groups.length === 0) return { events: [], tonicMidi, density: 0 };
+    if (groups.length === 0 && rests.length === 0)
+        return {
+            events: orphan ? [{ text: orphan, wordId: null, start: 0, midi: null }] : [],
+            tonicMidi,
+            density: 0,
+        };
 
     const phrases = phraseGroups(text, words);
     const pitches = scalePitches(tonicMidi, settings);
@@ -341,7 +388,8 @@ export function createSoundPlan(
                       (1 + (random() - 0.5) * 0.12 * settings.variationWeight),
               );
     });
-    const rawTicks = gaps.reduce((sum, gap) => sum + gap, 0);
+    const rawTicks = gaps.reduce((sum, gap) => sum + gap, 0) +
+        rests.reduce((sum, rest) => sum + (rest.kind === "quarter" ? 1 : 2) * noteTicks, 0);
     const finalHold = Math.max(
         INSTRUMENTS[settings.instrument].lastDuration,
         (settings.intervalMs * settings.gate) / 1000,
@@ -354,7 +402,7 @@ export function createSoundPlan(
     const starts = [0];
     for (const gap of gaps) starts.push(starts.at(-1)! + (gap * tickMs) / 1000);
 
-    const events: SoundEvent[] = [];
+    const notes: SoundEvent[] = [];
     let previousPitch = tonicMidi;
     let phraseIndex = 0;
     const isQuestion = /\?[\s"'»”)]*$/.test(text);
@@ -419,8 +467,8 @@ export function createSoundPlan(
                 bestPitch = pitch;
             }
         }
-        events.push({
-            text: group.text,
+        notes.push({
+            text: display[index],
             wordId: group.wordId,
             start: starts[index],
             midi: bestPitch,
@@ -428,28 +476,50 @@ export function createSoundPlan(
         previousPitch = bestPitch;
     }
 
-    const last = events.at(-1)!;
-    if (/![\s"'»”)]*$/.test(text)) last.velocity = 105;
-    const ending = isQuestion
-        ? pitches.find((pitch) => pitch > last.midi! && pitch - last.midi! <= 5)
-        : pitches.find((pitch) => pitch === tonicMidi);
-    if (ending !== undefined && ending !== last.midi) {
-        const holdScore =
-            settings.soundWeight +
-            (getScaleDegree(last.midi!, tonicMidi, settings.mode) % 7 === 0
-                ? settings.chordWeight
-                : 0);
-        const endingScore =
-            settings.cadenceWeight + (isQuestion ? 0 : settings.chordWeight);
-        if (endingScore > holdScore) last.endingMidi = ending;
+    const last = notes.at(-1);
+    if (last) {
+        if (/![\s"'»”)]*$/.test(text)) last.velocity = 105;
+        const ending = isQuestion
+            ? pitches.find((pitch) => pitch > last.midi! && pitch - last.midi! <= 5)
+            : pitches.find((pitch) => pitch === tonicMidi);
+        if (ending !== undefined && ending !== last.midi) {
+            const holdScore =
+                settings.soundWeight +
+                (getScaleDegree(last.midi!, tonicMidi, settings.mode) % 7 === 0
+                    ? settings.chordWeight
+                    : 0);
+            const endingScore =
+                settings.cadenceWeight + (isQuestion ? 0 : settings.chordWeight);
+            if (endingScore > holdScore) last.endingMidi = ending;
+        }
     }
 
     const noteStep = (noteTicks * tickMs) / 1000;
-    const duration = starts.at(-1) || noteStep;
+    const events: SoundEvent[] = [];
+    let restIndex = 0;
+    let restOffset = 0;
+    const appendRests = (after: number, base: number) => {
+        while (rests[restIndex]?.after === after) {
+            const kind = rests[restIndex].kind;
+            events.push({ text: kind === "quarter" ? "," : ".", wordId: null,
+                start: base + restOffset, midi: null, rest: kind });
+            restOffset += noteStep * (kind === "quarter" ? 1 : 2);
+            restIndex += 1;
+        }
+    };
+    appendRests(-1, 0);
+    notes.forEach((note, index) => {
+        events.push({ ...note, start: note.start + restOffset });
+        appendRests(index, note.start + noteStep);
+    });
+    if (orphan) events.push({ text: orphan, wordId: null, start: restOffset, midi: null });
+    const duration = rests.length
+        ? Math.max(noteStep, (events.at(-1)?.start ?? 0) + noteStep)
+        : starts.at(-1) || noteStep;
     return {
         events,
         tonicMidi,
-        density: events.length / Math.max(duration, 0.001),
+        density: notes.length / Math.max(duration, 0.001),
         noteStep,
     };
 }

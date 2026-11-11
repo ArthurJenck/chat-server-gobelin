@@ -16,6 +16,7 @@ import { getMessages, sendMessage } from "../messages/api";
 import type { Message } from "../messages/types";
 import { accountInstrument } from "../users/instrument";
 import type { Account } from "../users/types";
+import { latestMusicKey, publishDueConversationRest } from "./conversationMusic";
 
 const AVAILABLE_KEY: KeyState = { holderId: null, holderName: null };
 
@@ -98,7 +99,13 @@ export function useChannelChat(id: number, account: Account | null) {
         setBusy(true);
         setError("");
         try {
-            await sendMessage(id, text, { instrument });
+            await publishDueConversationRest(id).catch(() => false);
+            const key = latestMusicKey(await getMessages(id));
+            await sendMessage(id, text, {
+                instrument,
+                music_root: key.root,
+                music_mode: key.mode,
+            });
             setContent("");
             await refresh(keyChannelId);
         } catch (cause) {

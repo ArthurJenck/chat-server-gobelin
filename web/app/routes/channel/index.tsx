@@ -5,6 +5,7 @@ import { useChannelChat } from "../../features/chat/useChannelChat";
 import KeyControl from "../../features/key/KeyControl";
 import { PATHS } from "../../shared/config";
 import ChannelPages from "./ChannelPages";
+import { DEFAULT_MUSIC_KEY, musicColor } from "../../features/chat/conversationMusic";
 import "./channel.css";
 
 export default function ChannelPage() {
@@ -17,6 +18,7 @@ export default function ChannelPage() {
     } = useChannelChat(id, account);
     const textarea = useRef<HTMLTextAreaElement>(null);
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+    const [activeMusicKey, setActiveMusicKey] = useState(DEFAULT_MUSIC_KEY);
     const largestViewportHeight = useRef<number | null>(null);
 
     useEffect(() => {
@@ -53,7 +55,9 @@ export default function ChannelPage() {
         <main
             className="channel-page"
             data-keyboard-open={viewportHeight !== null && viewportHeight < (largestViewportHeight.current ?? viewportHeight) - 100}
-            style={viewportHeight ? { height: `${viewportHeight}px` } : undefined}
+            style={{ ...(viewportHeight ? { height: `${viewportHeight}px` } : {}),
+                "--channel-key-color": musicColor(activeMusicKey),
+            } as React.CSSProperties}
         >
             <header className="channel-header">
                 <Link className="channel-back" to={PATHS.home} aria-label="Retour aux channels">
@@ -73,7 +77,7 @@ export default function ChannelPage() {
                 <p className="channel-status">Chargement des messages…</p>
             )}
             {(accountError || error) && <p className="channel-status" role="alert">{accountError || error}</p>}
-            <ChannelPages messages={messages} userId={account?.id ?? null} />
+            <ChannelPages messages={messages} userId={account?.id ?? null} onKeyChange={setActiveMusicKey} />
             {channel && (
                 <form className="channel-composer" onSubmit={(event) => void submit(event)}>
                     <label className="channel-screen-reader" htmlFor="message-content">Message</label>

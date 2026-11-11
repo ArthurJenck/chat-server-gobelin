@@ -21,6 +21,7 @@ export function layoutSoundStaff(
         x: number;
         y: number;
         width: number;
+        rest?: "quarter" | "half" | "whole";
     }[][] = [[]];
     plan?.events.forEach((event, index) => {
         let row = rows.at(-1)!;
@@ -33,8 +34,9 @@ export function layoutSoundStaff(
                   ? settings.visualWordSpacing
                   : 0)
             : 0;
-        const groupWidth =
-            [...event.text].length * settings.visualFontSize * GLYPH_WIDTH;
+        const groupWidth = event.rest
+            ? event.rest === "quarter" ? 10 : 15
+            : [...event.text].length * settings.visualFontSize * GLYPH_WIDTH;
         if (row.length && x + groupWidth > width) {
             row = [];
             rows.push(row);
@@ -44,16 +46,20 @@ export function layoutSoundStaff(
             text: event.text,
             eventIndex: index,
             x,
-            y:
-                radius -
-                (getScaleDegree(
-                    event.midi ?? plan.tonicMidi,
-                    plan.tonicMidi,
-                    settings.mode,
-                ) *
-                    settings.visualLineSpacing) /
-                    2,
+            y: event.rest === "half"
+                ? lines[2] - 2.5
+                : event.rest === "whole"
+                  ? lines[1] + 2.5
+                  : event.rest === "quarter"
+                    ? radius
+                    : radius -
+                      (getScaleDegree(
+                          event.midi ?? plan.tonicMidi,
+                          plan.tonicMidi,
+                          settings.mode,
+                      ) * settings.visualLineSpacing) / 2,
             width: groupWidth,
+            rest: event.rest,
         });
     });
     return { lines, rows, groups: rows.flat(), width, height: lines.at(-1)! };

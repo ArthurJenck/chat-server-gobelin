@@ -6,4 +6,5 @@ export type Message = {
     creation_date: string;
     posted_at?: string;
     metadata?: Record<string, unknown> | null;
+    anonymous?: boolean;
 };

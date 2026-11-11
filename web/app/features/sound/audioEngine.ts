@@ -14,8 +14,20 @@ export async function startPlayback(
     const arrangement = createArrangement(plan, settings);
     const notes = [...new Set(arrangement.map((event) => event.note))];
     if (notes.length === 0) {
-        onFinished();
-        return () => {};
+        const duration = Math.max(0, ...plan.events.map((event) =>
+            event.start + (event.rest === "half" ? 2 : event.rest === "whole" ? 4 : event.rest === "quarter" ? 1 : 0) * (plan.noteStep ?? settings.intervalMs / 1000),
+        ));
+        const started = performance.now();
+        let stopped = false;
+        const timer = setTimeout(() => {
+            stopped = true;
+            onFinished();
+        }, duration * 1000);
+        onScheduled?.(() => stopped ? null : (performance.now() - started) / 1000);
+        return () => {
+            stopped = true;
+            clearTimeout(timer);
+        };
     }
 
     const context = new AudioContext();
@@ -77,6 +89,15 @@ export async function startPlayback(
     const origin = context.currentTime + 0.04;
     let latestVoiceEnd = 0;
     try {
+        for (const event of plan.events) {
+            if (!event.rest) continue;
+            const beats = event.rest === "quarter" ? 1 : event.rest === "half" ? 2 : 4;
+            const end = event.start + beats * (plan.noteStep ?? settings.intervalMs / 1000);
+            master.gain.setValueAtTime(0, origin + event.start);
+            if (plan.events.some((next) => next.midi !== null && next.start >= end - 0.000001))
+                master.gain.setValueAtTime(settings.volume, origin + end);
+            latestVoiceEnd = Math.max(latestVoiceEnd, end);
+        }
         for (const event of arrangement) {
             soundfont.start({
                 note: event.note,

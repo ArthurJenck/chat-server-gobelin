@@ -112,6 +112,23 @@ describe("Channel page", () => {
         expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
     });
 
+    it("shows an anonymous whole rest without an author or playback", async () => {
+        mockChannel([{
+            ...message(1, ""),
+            creation_date: new Date().toISOString(),
+            user: "anonymous",
+            anonymous: true,
+            metadata: { harmonie: { type: "conversation_rest", music_root: 1, music_mode: "major" } },
+        }]);
+        renderApp("/channels/5");
+        await waitFor(() => expect(document.querySelector(".channel-rest img"))
+            .toHaveAttribute("src", "/pictos/silence.svg"));
+        expect(screen.getByRole("button", { name: "Pause" })).toBeDisabled();
+        expect(document.querySelector(".channel-message-author")).toBeNull();
+        await waitFor(() => expect(document.querySelector(".channel-page"))
+            .toHaveStyle({ "--channel-key-color": "#FFA200" }));
+    });
+
     it("shows the key over the star in general and locks it when another user holds it", async () => {
         mockChannel([], [{
             ...message(1, "Clé récupérée"),

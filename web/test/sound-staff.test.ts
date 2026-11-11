@@ -83,6 +83,17 @@ it("uses exactly the five staff lines as the SVG height", () => {
     expect(layout.height).toBe(4 * DEFAULT_SOUND_SETTINGS.visualLineSpacing);
 });
 
+it("places half and whole rests on their notation lines", () => {
+    const half = layoutSoundStaff({ ...plan,
+        events: [{ text: ".", wordId: null, start: 0, midi: null, rest: "half" }],
+    }, DEFAULT_SOUND_SETTINGS);
+    const whole = layoutSoundStaff({ ...plan,
+        events: [{ text: "", wordId: null, start: 0, midi: null, rest: "whole" }],
+    }, DEFAULT_SOUND_SETTINGS);
+    expect(half.groups[0]).toMatchObject({ width: 15, y: half.lines[2] - 2.5 });
+    expect(whole.groups[0]).toMatchObject({ width: 15, y: whole.lines[1] + 2.5 });
+});
+
 it("moves whole groups to the next staff when they do not fit", () => {
     const layout = layoutSoundStaff(plan, DEFAULT_SOUND_SETTINGS, 30);
     const longWord = layoutSoundStaff(

@@ -4,6 +4,7 @@ import { startPlayback } from "../sound/audioEngine";
 import { withInstrumentProfile } from "../sound/soundConfig";
 import { CHANNEL_SOUND_SETTINGS, type ChannelStaffBlock } from "./channelPagination";
 import { messageInstrument } from "./messageSound";
+import { isConversationRest } from "./conversationMusic";
 
 export default function MessageItem({
     block,
@@ -13,9 +14,10 @@ export default function MessageItem({
     isOwn: boolean;
 }) {
     const { message, plan, row, first } = block;
+    const silent = isConversationRest(message);
     const settings = useMemo(
-        () => withInstrumentProfile(CHANNEL_SOUND_SETTINGS, messageInstrument(message)),
-        [message],
+        () => withInstrumentProfile({ ...CHANNEL_SOUND_SETTINGS, ...block.pageKey }, messageInstrument(message)),
+        [message, block.pageKey],
     );
     const [playing, setPlaying] = useState(false);
     const [error, setError] = useState("");
@@ -60,7 +62,7 @@ export default function MessageItem({
 
     return (
         <li className="channel-message">
-            {first && (
+            {first && !silent && (
                 <div className={`channel-message-author${isOwn ? " channel-message-author-own" : ""}`}>
                     <span>{isOwn ? "Moi" : message.user}</span>
                     {isOwn && <img src="/pictos/note.svg" alt="" />}
@@ -69,8 +71,8 @@ export default function MessageItem({
             <button
                 className="channel-staff"
                 type="button"
-                aria-label={playing ? "Arrêter la lecture" : "Lire le message"}
-                disabled={!plan.events.length}
+                aria-label={silent ? "Pause" : playing ? "Arrêter la lecture" : "Lire le message"}
+                disabled={silent || !plan.events.some((event) => event.midi !== null || event.rest)}
                 onClick={() => void togglePlayback()}
             >
                 <svg className="channel-staff-lines" aria-hidden="true" viewBox="0 0 360 40" preserveAspectRatio="none">
@@ -85,10 +87,17 @@ export default function MessageItem({
                 {row.map((group) => (
                     <span
                         key={group.eventIndex}
-                        className="channel-syllable"
+                        className={group.rest ? "channel-syllable channel-rest" : "channel-syllable"}
                         style={{ left: `${group.x}px`, top: `${group.y}px` }}
                     >
-                        <EmphasizedText>{group.text}</EmphasizedText>
+                        {group.rest ? (
+                            <img
+                                src={group.rest === "quarter" ? "/pictos/breath.svg" : "/pictos/silence.svg"}
+                                alt=""
+                                width={group.rest === "quarter" ? 10 : 15}
+                                height={group.rest === "quarter" ? 23 : 5}
+                            />
+                        ) : <EmphasizedText>{group.text}</EmphasizedText>}
                     </span>
                 ))}
                 <img className="channel-staff-coda channel-staff-coda-right" src="/pictos/coda.svg" alt="" />

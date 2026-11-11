@@ -242,7 +242,7 @@ describe("sound workshop", () => {
             "va",
             "su",
             "per",
-            "bien",
+            "bien!",
         ]);
         expect(notes).toEqual([79, 79, 76, 72, 76, 79, 77, 76, 74]);
         expect(notes[0]).toBe(notes[1]);
@@ -261,19 +261,37 @@ describe("sound workshop", () => {
             DEFAULT_SOUND_SETTINGS,
         );
 
-        expect(question.events.map((event) => event.text)).toEqual(
-            statement.events.map((event) => event.text),
-        );
-        expect(statement.events.map((event) => event.midi)).toEqual([
+        expect(question.events.map((event) => event.text)).toEqual([
+            "sa", "lut", "ça", "va?",
+        ]);
+        expect(statement.events.map((event) => event.midi).filter((midi) => midi !== null)).toEqual([
             72, 77, 76, 72,
         ]);
         expect(question.events.slice(0, -1).map((event) => event.midi)).toEqual(
-            statement.events.slice(0, -1).map((event) => event.midi),
+            statement.events.slice(0, -2).map((event) => event.midi),
         );
         expect(question.events.at(-1)?.endingMidi).toBeGreaterThan(
             question.events.at(-1)!.midi!,
         );
     });
+
+    it.each(["fixed", "length"] as const)(
+        "inserts real rests before, between and after notes in %s mode",
+        (speedMode) => {
+            const plan = createSoundPlan(",salut, ça va.", {
+                ...DEFAULT_SOUND_SETTINGS,
+                speedMode,
+            });
+            const rests = plan.events.filter((event) => event.rest);
+            expect(rests.map((event) => event.rest)).toEqual(["quarter", "quarter", "half"]);
+            const notes = plan.events.filter((event) => event.midi !== null);
+            expect(notes[0].start).toBeCloseTo(plan.noteStep!);
+            expect(notes.find((event) => event.text === "ça")!.start)
+                .toBeGreaterThanOrEqual(rests[1].start + plan.noteStep!);
+            expect(rests[2].start).toBeGreaterThan(notes.at(-1)!.start);
+            expect(plan.events.at(-1)?.rest).toBe("half");
+        },
+    );
 
     it("accents the last syllable of an exclamation", () => {
         const exclamation = createSoundPlan(

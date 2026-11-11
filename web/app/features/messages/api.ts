@@ -11,6 +11,7 @@ export async function sendMessage(
     channelId: number,
     content: string,
     metadata?: Record<string, unknown>,
+    anonymous = false,
 ): Promise<Message> {
     const response = await apiFetch("/channel/message", {
         method: "POST",
@@ -18,6 +19,7 @@ export async function sendMessage(
             channel: channelId,
             content,
             ...(metadata ? { metadata } : {}),
+            ...(anonymous ? { anonymous: true } : {}),
         }),
     });
     return response.json() as Promise<Message>;
