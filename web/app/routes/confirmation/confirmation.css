@@ -1,0 +1,100 @@
+.confirmation-page {
+    box-sizing: border-box;
+    display: flex;
+    min-height: 100svh;
+    flex-direction: column;
+    align-items: center;
+    margin: -8px;
+    padding: 60px 40px 40px;
+    text-align: center;
+}
+
+.confirmation-back {
+    box-sizing: border-box;
+    display: flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    padding: 0;
+    border: 0.4px dotted var(--color-ink);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.confirmation-back img {
+    display: block;
+    width: 35px;
+    height: 28px;
+    transform: rotate(180deg);
+}
+
+.confirmation-title {
+    margin: 70px 0 0;
+    font-size: 40px;
+    line-height: 40px;
+}
+
+.confirmation-title span {
+    display: block;
+}
+
+.confirmation-symbol {
+    position: relative;
+    width: 146px;
+    height: 148px;
+    margin-top: 55px;
+}
+
+.confirmation-symbol img {
+    position: absolute;
+    display: block;
+}
+
+.confirmation-star {
+    top: 11px;
+    left: calc(50% + 3px);
+    width: 140px;
+    height: 142px;
+    opacity: 0.5;
+    transform: translateX(-50%);
+}
+
+.confirmation-key {
+    top: 0;
+    left: 50%;
+    width: 57px;
+    height: 124px;
+    transform: translateX(-50%);
+}
+
+.confirmation-details {
+    display: flex;
+    width: 212px;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 65px;
+}
+
+.confirmation-details p {
+    box-sizing: border-box;
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 5px 10px;
+    border: 0.4px dotted var(--color-ink);
+    border-radius: 20px;
+    font-size: 20px;
+    line-height: 28px;
+    overflow-wrap: anywhere;
+}
+
+.confirmation-submit {
+    align-self: flex-end;
+    margin-top: auto;
+    padding-right: 14px;
+    padding-left: 20px;
+}

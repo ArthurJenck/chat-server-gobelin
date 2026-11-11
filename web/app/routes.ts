@@ -15,6 +15,7 @@ export default [
     ]),
     route("profil", "routes/profile.tsx"),
     route("profil/instrument", "routes/instrument.tsx"),
+    route("profil/confirmation", "routes/confirmation/index.tsx"),
     route("groupes/nouveau", "routes/new-channel.tsx"),
     route("channels/:channelId", "routes/channel/index.tsx"),
     route("atelier-son", "routes/sound-lab.tsx"),

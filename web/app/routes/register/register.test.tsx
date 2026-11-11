@@ -43,14 +43,22 @@ describe("Register page", () => {
         expect(requests).toBe(0);
     });
 
-    it("registers with matching passwords and stores the session", async () => {
+    it("waits for confirmation before registering the complete account", async () => {
         let submitted: unknown;
+        let requests = 0;
         server.use(
             http.post("http://localhost:4000/user", async ({ request }) => {
+                requests++;
                 submitted = await request.json();
                 return new HttpResponse(null, { status: 201 });
             }),
             http.post("http://localhost:4000/login", () => HttpResponse.text("register-token")),
+            http.get("http://localhost:4000/me", () => HttpResponse.json({
+                id: 1,
+                username: "Alice",
+                channels: [],
+                metadata: { harmonie: { instrument: "harp" } },
+            })),
         );
         renderApp("/register");
 
@@ -59,7 +67,17 @@ describe("Register page", () => {
         await userEvent.type(screen.getByLabelText("Confirmer le mot de passe :"), "secret");
         await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
 
+        expect(requests).toBe(0);
+        expect(await screen.findByRole("radio", { name: "Harpe" })).toBeInTheDocument();
+        await userEvent.click(screen.getByRole("radio", { name: "Harpe" }));
+        await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
+        expect(requests).toBe(0);
+        expect(await screen.findByText("Alice")).toBeInTheDocument();
+        expect(screen.getByText("Harpe")).toBeInTheDocument();
+        await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
+
         await waitFor(() => expect(getToken()).toBe("register-token"));
-        expect(submitted).toEqual({ username: "Alice", password: "secret" });
+        expect(submitted).toEqual({ username: "Alice", password: "secret", metadata: { instrument: "harp" } });
+        expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
     });
 });

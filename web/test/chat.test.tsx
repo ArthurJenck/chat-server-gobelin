@@ -108,6 +108,10 @@ describe("Harmonie", () => {
         await userEvent.click(
             screen.getByRole("button", { name: "Continuer" }),
         );
+        expect(await screen.findByText("Alice")).toBeInTheDocument();
+        expect(screen.getByText("Flûte")).toBeInTheDocument();
+        expect(saved).toBeUndefined();
+        await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
         expect(
             await screen.findByRole("heading", { name: "Mes groupes" }),
         ).toBeInTheDocument();

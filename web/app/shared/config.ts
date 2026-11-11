@@ -9,6 +9,7 @@ export const PATHS = {
     login: "/login",
     profile: "/profil",
     instrument: "/profil/instrument",
+    confirmation: "/profil/confirmation",
     newChannel: "/groupes/nouveau",
     channel: (id: number) => `/channels/${id}`,
 } as const;

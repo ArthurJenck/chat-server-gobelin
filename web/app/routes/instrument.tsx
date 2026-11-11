@@ -1,74 +1,58 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import DottedButton from "../components/DottedButton";
 import InstrumentList from "../components/InstrumentList";
 import { PATHS } from "../shared/config";
-import {
-    accountInstrument,
-    saveInstrument,
-} from "../features/users/instrument";
+import { accountInstrument } from "../features/users/instrument";
 import { useAccount } from "../features/auth/useAccount";
-import type { Instrument } from "../features/sound/soundConfig";
+import { getToken } from "../features/auth/token";
+import { useRegistration } from "../features/auth/RegistrationContext";
 import "./instrument.css";
 
 export default function InstrumentPage() {
     const navigate = useNavigate();
-    const { account, loading, error: accountError } = useAccount(false);
+    const { registration, selectedInstrument, setSelectedInstrument } = useRegistration();
+    const { account, loading, error: accountError } = useAccount(false, false);
     const initial = account && accountInstrument(account);
-    const [selected, setSelected] = useState<Instrument | null>(null);
-    const [busy, setBusy] = useState(false);
-    const [error, setError] = useState("");
 
     useEffect(() => {
-        if (initial) setSelected(initial);
-    }, [initial]);
+        if (!getToken() && !registration) void navigate("/register", { replace: true });
+    }, [navigate, registration]);
 
-    async function submit(event: React.FormEvent<HTMLFormElement>) {
+    useEffect(() => {
+        if (initial && !selectedInstrument) setSelectedInstrument(initial);
+    }, [initial, selectedInstrument, setSelectedInstrument]);
+
+    function submit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!account || !selected || busy) return;
-        setBusy(true);
-        setError("");
-        try {
-            await saveInstrument(account, selected);
-            void navigate(initial ? PATHS.profile : PATHS.home, {
-                replace: true,
-            });
-        } catch (cause) {
-            setError(
-                cause instanceof Error
-                    ? cause.message
-                    : "Enregistrement impossible.",
-            );
-        } finally {
-            setBusy(false);
-        }
+        if (!selectedInstrument || (!account && !registration)) return;
+        void navigate(PATHS.confirmation);
     }
 
     return (
         <main className="instrument-page">
             <h1 id="instrument-title">
-                <span>Choisis ton</span>
+                <span>Choisis ton</span>{" "}
                 <span>instrument</span>
             </h1>
             {loading && <p>Chargement…</p>}
             {accountError && <p role="alert">{accountError}</p>}
-            {account && (
+            {(account || registration) && (
                 <form
                     className="instrument-form"
-                    onSubmit={(event) => void submit(event)}
+                    onSubmit={submit}
                 >
                     <InstrumentList
-                        selected={selected}
-                        onChange={setSelected}
+                        selected={selectedInstrument}
+                        onChange={setSelectedInstrument}
                         labelledBy="instrument-title"
                     />
-                    {error && <p role="alert">{error}</p>}
                     <DottedButton
                         className="instrument-submit"
                         type="submit"
                         iconSrc="/pictos/arrow.svg"
                         emphasized
-                        disabled={!selected || busy}
+                        disabled={!selectedInstrument}
                     >
                         Continuer
                     </DottedButton>

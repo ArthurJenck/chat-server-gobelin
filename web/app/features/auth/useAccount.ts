@@ -7,7 +7,7 @@ import { accountInstrument } from "../users/instrument";
 import type { Account } from "../users/types";
 import { getToken } from "./token";
 
-export function useAccount(requireInstrument = true) {
+export function useAccount(requireInstrument = true, requireSession = true) {
     const navigate = useNavigate();
     const [account, setAccount] = useState<Account | null>(null);
     const [loading, setLoading] = useState(true);
@@ -15,7 +15,8 @@ export function useAccount(requireInstrument = true) {
 
     useEffect(() => {
         if (!getToken()) {
-            void navigate(PATHS.welcome, { replace: true });
+            if (requireSession) void navigate(PATHS.welcome, { replace: true });
+            else setLoading(false);
             return;
         }
         let active = true;
@@ -43,7 +44,7 @@ export function useAccount(requireInstrument = true) {
         return () => {
             active = false;
         };
-    }, [navigate, requireInstrument]);
+    }, [navigate, requireInstrument, requireSession]);
 
     return { account, loading, error };
 }

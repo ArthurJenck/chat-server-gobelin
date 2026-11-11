@@ -9,6 +9,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import type { Route } from "./+types/root";
+import RegistrationProvider from "./features/auth/RegistrationContext";
 import "./tokens.css";
 
 export const links: Route.LinksFunction = () => [
@@ -81,7 +82,9 @@ export default function App() {
                     connexion.
                 </p>
             )}
-            <Outlet />
+            <RegistrationProvider>
+                <Outlet />
+            </RegistrationProvider>
         </>
     );
 }

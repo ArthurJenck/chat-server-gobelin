@@ -10,6 +10,7 @@ import Register from "../app/routes/register/index";
 import SoundLab from "../app/routes/sound-lab";
 import Profile from "../app/routes/profile";
 import InstrumentPage from "../app/routes/instrument";
+import Confirmation from "../app/routes/confirmation";
 import NewChannel from "../app/routes/new-channel";
 import Guest from "../app/routes/guest";
 
@@ -31,6 +32,7 @@ export function renderApp(path: string | string[] = "/") {
                     },
                     { path: "/profil", element: <Profile /> },
                     { path: "/profil/instrument", element: <InstrumentPage /> },
+                    { path: "/profil/confirmation", element: <Confirmation /> },
                     { path: "/groupes/nouveau", element: <NewChannel /> },
                     { path: "/channels/:channelId", element: <ChannelPage /> },
                     { path: "/atelier-son", element: <SoundLab /> },
