@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import DottedButton from "../components/DottedButton";
 import InstrumentList from "../components/InstrumentList";
 import { PATHS } from "../shared/config";
-import { accountInstrument } from "../features/users/instrument";
+import { accountInstrument, saveInstrument } from "../features/users/instrument";
 import { useAccount } from "../features/auth/useAccount";
 import { getToken } from "../features/auth/token";
 import { useRegistration } from "../features/auth/RegistrationContext";
@@ -14,6 +14,8 @@ export default function InstrumentPage() {
     const { registration, selectedInstrument, setSelectedInstrument } = useRegistration();
     const { account, loading, error: accountError } = useAccount(false, false);
     const initial = account && accountInstrument(account);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState("");
 
     useEffect(() => {
         if (!getToken() && !registration) void navigate("/register", { replace: true });
@@ -23,10 +25,25 @@ export default function InstrumentPage() {
         if (initial && !selectedInstrument) setSelectedInstrument(initial);
     }, [initial, selectedInstrument, setSelectedInstrument]);
 
-    function submit(event: React.FormEvent<HTMLFormElement>) {
+    async function submit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!selectedInstrument || (!account && !registration)) return;
-        void navigate(PATHS.confirmation);
+        if (!selectedInstrument || (!account && !registration) || busy) return;
+        if (account && initial) {
+            setBusy(true);
+            setError("");
+            try {
+                if (selectedInstrument !== initial)
+                    await saveInstrument(account, selectedInstrument);
+                setSelectedInstrument(null);
+                void navigate(PATHS.profile, { replace: true });
+            } catch (cause) {
+                setError(cause instanceof Error ? cause.message : "Enregistrement impossible.");
+            } finally {
+                setBusy(false);
+            }
+        } else {
+            void navigate(PATHS.confirmation);
+        }
     }
 
     return (
@@ -37,6 +54,7 @@ export default function InstrumentPage() {
             </h1>
             {loading && <p>Chargement…</p>}
             {accountError && <p role="alert">{accountError}</p>}
+            {error && <p role="alert">{error}</p>}
             {(account || registration) && (
                 <form
                     className="instrument-form"
@@ -52,9 +70,9 @@ export default function InstrumentPage() {
                         type="submit"
                         iconSrc="/pictos/arrow.svg"
                         emphasized
-                        disabled={!selectedInstrument}
+                        disabled={!selectedInstrument || busy}
                     >
-                        Continuer
+                        {initial ? "Valider" : "Continuer"}
                     </DottedButton>
                 </form>
             )}

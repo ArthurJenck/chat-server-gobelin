@@ -37,7 +37,7 @@ describe("Confirmation page", () => {
         },
     );
 
-    it("saves an edited instrument on confirmation and opens the profile", async () => {
+    it("shows the confirmation design on the profile and saves an instrument after validation", async () => {
         setToken("valid-token");
         let saved: unknown;
         const current = {
@@ -54,16 +54,16 @@ describe("Confirmation page", () => {
                 return HttpResponse.json(current);
             }),
         );
-        renderApp("/profil/instrument");
-        await userEvent.click(await screen.findByRole("radio", { name: "Harpe" }));
-        await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
-
+        renderApp("/profil");
+        expect(await screen.findByRole("heading", { name: "Tu fais partie de la communauté Harmonie" })).toBeInTheDocument();
         expect(screen.getByText("Alice")).toBeInTheDocument();
-        expect(screen.getByText("Harpe")).toBeInTheDocument();
+        await userEvent.click(screen.getByRole("button", { name: "Modifier l’instrument : Guitare" }));
+        expect(await screen.findByRole("radio", { name: "Guitare" })).toBeChecked();
+        await userEvent.click(await screen.findByRole("radio", { name: "Harpe" }));
         expect(saved).toBeUndefined();
-        await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
+        await userEvent.click(screen.getByRole("button", { name: "Valider" }));
 
-        expect(await screen.findByRole("heading", { name: "Profil" })).toBeInTheDocument();
+        expect(await screen.findByRole("button", { name: "Modifier l’instrument : Harpe" })).toBeInTheDocument();
         expect(saved).toEqual({ metadata: { instrument: "harp" } });
     });
 });

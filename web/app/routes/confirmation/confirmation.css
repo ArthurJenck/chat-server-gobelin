@@ -77,7 +77,8 @@
     margin-top: 65px;
 }
 
-.confirmation-details p {
+.confirmation-details p,
+.confirmation-detail-button {
     box-sizing: border-box;
     display: flex;
     min-height: 40px;
@@ -90,6 +91,19 @@
     font-size: 20px;
     line-height: 28px;
     overflow-wrap: anywhere;
+}
+
+.confirmation-detail-button {
+    width: 100%;
+    background: transparent;
+    color: var(--color-ink);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.confirmation-detail-button:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
 }
 
 .confirmation-submit {

@@ -1,46 +1,48 @@
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
+import DottedButton from "../components/DottedButton";
+import ProfileSummary from "../components/ProfileSummary";
 import { clearToken } from "../features/auth/token";
-import PageHeader from "../components/PageHeader";
+import { useRegistration } from "../features/auth/RegistrationContext";
 import { PATHS } from "../shared/config";
 import { accountInstrument } from "../features/users/instrument";
 import { useAccount } from "../features/auth/useAccount";
-import { INSTRUMENTS } from "../features/sound/soundConfig";
 
 export default function Profile() {
     const navigate = useNavigate();
     const { account, loading, error } = useAccount();
-    const instrument = account && accountInstrument(account);
+    const { setSelectedInstrument } = useRegistration();
+    const instrument = account ? accountInstrument(account) : null;
 
     function logout() {
         clearToken();
         void navigate(PATHS.welcome, { replace: true });
     }
 
+    function changeInstrument() {
+        if (!instrument) return;
+        setSelectedInstrument(instrument);
+        void navigate(PATHS.instrument);
+    }
+
     return (
-        <main>
-            <PageHeader title="Profil" back={PATHS.home} />
+        <ProfileSummary
+            username={account?.username}
+            instrument={instrument}
+            onBack={() => void navigate(PATHS.home)}
+            onInstrumentClick={changeInstrument}
+        >
             {loading && <p>Chargement du profil…</p>}
             {error && <p role="alert">{error}</p>}
             {account && (
-                <>
-                    <section aria-labelledby="username-heading">
-                        <h2 id="username-heading">Nom d’utilisateur</h2>
-                        <p>{account.username}</p>
-                    </section>
-                    <section aria-labelledby="instrument-heading">
-                        <h2 id="instrument-heading">Instrument</h2>
-                        <p>
-                            {instrument
-                                ? INSTRUMENTS[instrument].label
-                                : "Aucun instrument choisi"}
-                        </p>
-                        <Link to={PATHS.instrument}>Modifier l’instrument</Link>
-                    </section>
-                    <button type="button" onClick={logout}>
-                        Se déconnecter
-                    </button>
-                </>
+                <DottedButton
+                    className="confirmation-submit"
+                    iconSrc="/pictos/arrow.svg"
+                    emphasized
+                    onClick={logout}
+                >
+                    Se déconnecter
+                </DottedButton>
             )}
-        </main>
+        </ProfileSummary>
     );
 }

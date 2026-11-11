@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import DottedButton from "../../components/DottedButton";
+import ProfileSummary from "../../components/ProfileSummary";
 import { login, register } from "../../features/auth/api";
 import { useRegistration } from "../../features/auth/RegistrationContext";
 import { getToken, setToken } from "../../features/auth/token";
 import { useAccount } from "../../features/auth/useAccount";
-import { INSTRUMENTS } from "../../features/sound/soundConfig";
 import { accountInstrument, saveInstrument } from "../../features/users/instrument";
 import { PATHS } from "../../shared/config";
-import "./confirmation.css";
 
 export default function Confirmation() {
     const navigate = useNavigate();
@@ -66,30 +65,11 @@ export default function Confirmation() {
     const username = account?.username ?? registration?.username;
 
     return (
-        <main className="confirmation-page">
-            <button
-                className="confirmation-back"
-                type="button"
-                aria-label="Retour"
-                onClick={() => void navigate(PATHS.instrument)}
-            >
-                <img src="/pictos/arrow.svg" alt="" />
-            </button>
-            <h1 className="confirmation-title">
-                <span>Tu fais partie de</span>{" "}
-                <span>la communauté</span>{" "}
-                <span>Harmonie</span>
-            </h1>
-            <div className="confirmation-symbol" aria-hidden="true">
-                <img className="confirmation-star" src="/pictos/star.svg" alt="" />
-                <img className="confirmation-key" src="/pictos/key.svg" alt="" />
-            </div>
-            {username && selectedInstrument && (
-                <div className="confirmation-details">
-                    <p>{username}</p>
-                    <p>{INSTRUMENTS[selectedInstrument].label}</p>
-                </div>
-            )}
+        <ProfileSummary
+            username={username}
+            instrument={selectedInstrument}
+            onBack={() => void navigate(PATHS.instrument)}
+        >
             {(accountError || error) && <p role="alert">{accountError || error}</p>}
             <DottedButton
                 className="confirmation-submit"
@@ -100,6 +80,6 @@ export default function Confirmation() {
             >
                 Continuer
             </DottedButton>
-        </main>
+        </ProfileSummary>
     );
 }
