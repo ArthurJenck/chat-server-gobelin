@@ -58,8 +58,9 @@ func (r *repo) GetByChannel(ctx context.Context, channel channels.Channel) ([]Me
 		if message.Anonymous {
 			messages[i].User = "anonymous"
 		}
-		var metadata map[string]json.RawMessage
-		if len(message.RawMetadata) > 0 {
+		metadata := make(map[string]json.RawMessage)
+		//This will catch null value, [] who were introduced as a bug, and useless {}
+		if len(message.RawMetadata) > 2 {
 			err = json.Unmarshal(message.RawMetadata, &metadata)
 			if err != nil {
 				return messages, fmt.Errorf("Error unmarshaling metadata: %w for %s", err, message.RawMetadata)
@@ -93,8 +94,9 @@ func (r *repo) GetByID(ctx context.Context, id int64) (*Message, error) {
 		return &message, fmt.Errorf("Error retrieving message by id: %w", err)
 	}
 
-	var metadata map[string]json.RawMessage
-	if len(message.RawMetadata) > 0 {
+	metadata := make(map[string]json.RawMessage)
+	//This will catch null value, [] who were introduced as a bug, and useless {}
+	if len(message.RawMetadata) > 2 {
 		err = json.Unmarshal(message.RawMetadata, &metadata)
 		if err != nil {
 			return &message, fmt.Errorf("Error unmarshaling metadata: %w", err)

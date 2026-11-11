@@ -72,7 +72,7 @@ func main() {
 
 	generalChannel, _ := channelRepo.GetByName(ctx, "general")
 	if generalChannel == nil {
-		generalChannel, err = channelRepo.Create(ctx, "general", json.RawMessage(`[]`))
+		generalChannel, err = channelRepo.Create(ctx, "general", json.RawMessage(`{}`))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -92,7 +92,7 @@ func main() {
 			case <- ctx.Done():
 				return
 			case _ = <-ticker.C:
-				messageRepo.Create(ctx, fmt.Sprintf("clock tick : %s", time.Now().Format(time.UnixDate)), json.RawMessage(`[]`), *generalChannel, *internalUser, true, nil)
+				messageRepo.Create(ctx, fmt.Sprintf("clock tick : %s", time.Now().Format(time.UnixDate)), json.RawMessage(`{}`), *generalChannel, *internalUser, true, nil)
 			}
 		}
 	}()
@@ -124,11 +124,12 @@ func main() {
 
 	router.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
 	router.HandleFunc("/user", userHandler.Create).Methods(http.MethodPost)
-	router.HandleFunc("/user/edit", userHandler.Edit).Methods(http.MethodPost)
+	router.HandleFunc("/user", userHandler.Edit).Methods(http.MethodPut)
 	router.HandleFunc("/me", userHandler.Me).Methods(http.MethodGet)
 	router.HandleFunc("/socket", hub.ServeWS).Methods(http.MethodGet)
 	/*router.HandleFunc("/channel", channelHandler.Get).Methods(http.MethodGet)*/
 	router.HandleFunc("/channel", channelHandler.Create).Methods(http.MethodPost)
+	router.HandleFunc("/channel", channelHandler.Edit).Methods(http.MethodPut)
 	router.HandleFunc("/channel/enter", channelHandler.EnterChannel).Methods(http.MethodPost)
 	router.HandleFunc("/channel/message", messageHandler.GetMessages).Methods(http.MethodGet)
 	router.HandleFunc("/channel/message", messageHandler.CreateMessage).Methods(http.MethodPost)
@@ -155,7 +156,7 @@ func setAccessControlHeader(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Namespace")
 		next.ServeHTTP(w, r)
 	})
 }

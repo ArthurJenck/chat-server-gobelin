@@ -22,17 +22,22 @@ type BroadcastHub struct {
 
 // serveWs handles websocket requests from the peer.
 func (hub *BroadcastHub) ServeWS(writer http.ResponseWriter, request *http.Request) {
-	channelIDString := request.URL.Query().Get("channel")
-	if channelIDString == "" {
+	channelIDStrings := request.URL.Query()["channel"]
+	if len(channelIDStrings) == 0 {
 		log.Printf("No channel found: %s", request.URL.RawQuery)
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	channelID, err := strconv.ParseInt(channelIDString, 10, 64)
-	if err != nil {
-		log.Printf("Error converting channel ID: %s", err.Error())
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
+
+	channels := make(map[int64]struct{})
+	for _, channelIDString := range channelIDStrings {
+		channelID, err := strconv.ParseInt(channelIDString, 10, 64)
+		if err != nil {
+			log.Printf("Error converting channel ID: %s", err.Error())
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		channels[channelID] = struct{}{}
 	}
 
 	conn, err := upgrader.Upgrade(writer, request, nil)
@@ -40,8 +45,7 @@ func (hub *BroadcastHub) ServeWS(writer http.ResponseWriter, request *http.Reque
 		log.Println(err)
 		return
 	}
-	channels := make(map[int64]struct{})
-	channels[channelID] = struct{}{}
+
 	client := &Websocket{hub: hub, conn: conn, send: make(chan []byte, 256), channels: channels}
 	client.hub.register <- client
 
