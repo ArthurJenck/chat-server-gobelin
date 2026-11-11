@@ -8,15 +8,18 @@ import (
 	"chat-gobelin-api/internal"
 	"chat-gobelin-api/internal/users"
 	"chat-gobelin-api/internal/channels"
+	"chat-gobelin-api/internal/websockets"
 )
 
 type channelHandler struct {
+	hub *websockets.BroadcastHub
 	channelRepo channels.Repo
 	userRepo users.Repo
 }
 
-func NewChannelHandler(s channels.Repo, u users.Repo) (*channelHandler, error) {
+func NewChannelHandler(h *websockets.BroadcastHub, s channels.Repo, u users.Repo) (*channelHandler, error) {
 	return &channelHandler{
+		hub: h,
 		channelRepo: s,
 		userRepo: u,
 	}, nil

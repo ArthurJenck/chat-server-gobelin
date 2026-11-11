@@ -17,6 +17,7 @@ import (
 	"chat-gobelin-api/internal/users"
 	"chat-gobelin-api/internal/channels"
 	"chat-gobelin-api/internal/messages"
+	"chat-gobelin-api/internal/websockets"
 	"chat-gobelin-api/internal"
 
 	"github.com/gorilla/mux"
@@ -34,6 +35,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	//New event broadcaster, run in background to dispatch update to websockets
+	hub := websockets.NewBroadcastHub()
+	go hub.Run()
 
 	userRepo, err := users.NewRepo(db)
 	if err != nil {
@@ -92,17 +97,17 @@ func main() {
 		}
 	}()
 
-	userHandler, err := handlers.NewUserHandler(userRepo, channelRepo, *generalChannel)
+	userHandler, err := handlers.NewUserHandler(hub, userRepo, channelRepo, *generalChannel)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	channelHandler, err := handlers.NewChannelHandler(channelRepo, userRepo)
+	channelHandler, err := handlers.NewChannelHandler(hub, channelRepo, userRepo)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	messageHandler, err := handlers.NewMessageHandler(messageRepo)
+	messageHandler, err := handlers.NewMessageHandler(hub, messageRepo)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -121,6 +126,7 @@ func main() {
 	router.HandleFunc("/user", userHandler.Create).Methods(http.MethodPost)
 	router.HandleFunc("/user/edit", userHandler.Edit).Methods(http.MethodPost)
 	router.HandleFunc("/me", userHandler.Me).Methods(http.MethodGet)
+	router.HandleFunc("/socket", hub.ServeWS).Methods(http.MethodGet)
 	/*router.HandleFunc("/channel", channelHandler.Get).Methods(http.MethodGet)*/
 	router.HandleFunc("/channel", channelHandler.Create).Methods(http.MethodPost)
 	router.HandleFunc("/channel/enter", channelHandler.EnterChannel).Methods(http.MethodPost)
@@ -185,6 +191,8 @@ func (amw *authenticationMiddleware) authMiddleware(next http.Handler) http.Hand
 		currentUser, err := amw.Repo.GetByID(r.Context(), claims.ID)
 		if err != nil  {
 			log.Printf("Error retrieving user: %s", err.Error())
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
 		}
 		ctx := context.WithValue(r.Context(), "user", currentUser)
 		next.ServeHTTP(w, r.WithContext(ctx))
