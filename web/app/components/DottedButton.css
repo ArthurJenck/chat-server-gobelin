@@ -1,0 +1,37 @@
+.dotted-button {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    position: relative;
+    min-height: 40px;
+    padding: 4px 12px 4px 17px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-ink);
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 30px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.dotted-button::before {
+    position: absolute;
+    inset: 0;
+    background:
+        repeating-linear-gradient(90deg, rgb(0 0 0 / 40%) 0 2px, transparent 2px 4px) top / 100% 1px no-repeat,
+        repeating-linear-gradient(90deg, rgb(0 0 0 / 40%) 0 2px, transparent 2px 4px) bottom / 100% 1px no-repeat,
+        repeating-linear-gradient(0deg, rgb(0 0 0 / 40%) 0 2px, transparent 2px 4px) left / 1px 100% no-repeat,
+        repeating-linear-gradient(0deg, rgb(0 0 0 / 40%) 0 2px, transparent 2px 4px) right / 1px 100% no-repeat;
+    content: "";
+    pointer-events: none;
+}
+
+.dotted-button img {
+    display: block;
+    width: 35px;
+    height: 28px;
+}

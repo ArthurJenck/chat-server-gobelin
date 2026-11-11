@@ -1,0 +1,51 @@
+.welcome-page {
+    box-sizing: border-box;
+    display: flex;
+    min-height: 100svh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: -8px;
+    padding: 40px 20px 76px;
+    text-align: center;
+}
+
+.welcome-title {
+    margin: 0 0 68px;
+    font-size: 44px;
+    line-height: 40px;
+    transform: translateY(4px);
+}
+
+.welcome-title span {
+    display: block;
+}
+
+.welcome-symbol {
+    position: relative;
+    width: 146px;
+    height: 148px;
+    margin-bottom: 62px;
+}
+
+.welcome-symbol img {
+    position: absolute;
+    display: block;
+}
+
+.welcome-star {
+    top: 11px;
+    left: calc(50% + 3px);
+    width: 140px;
+    height: 142px;
+    opacity: 0.5;
+    transform: translateX(-50%);
+}
+
+.welcome-key {
+    top: 0;
+    left: 50%;
+    width: 57px;
+    height: 124px;
+    transform: translateX(-50%);
+}

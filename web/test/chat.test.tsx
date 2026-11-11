@@ -59,7 +59,7 @@ describe("Harmonie", () => {
         renderApp("/");
         expect(
             await screen.findByRole("heading", {
-                name: "Bienvenue à Harmonie",
+                name: "Bienvenue à Flarmonie",
             }),
         ).toBeInTheDocument();
         await userEvent.click(screen.getByRole("button", { name: "C'est parti !" }));
@@ -76,7 +76,7 @@ describe("Harmonie", () => {
         renderApp("/");
         expect(
             await screen.findByRole("heading", {
-                name: "Bienvenue à Harmonie",
+                name: "Bienvenue à Flarmonie",
             }),
         ).toBeInTheDocument();
     });
@@ -125,7 +125,7 @@ describe("Harmonie", () => {
         await userEvent.click(screen.getByRole("button", { name: "Se déconnecter" }));
         expect(
             await screen.findByRole("heading", {
-                name: "Bienvenue à Harmonie",
+                name: "Bienvenue à Flarmonie",
             }),
         ).toBeInTheDocument();
     });
