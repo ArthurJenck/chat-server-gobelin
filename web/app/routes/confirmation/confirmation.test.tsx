@@ -66,4 +66,69 @@ describe("Confirmation page", () => {
         expect(await screen.findByRole("button", { name: "Modifier l’instrument : Harpe" })).toBeInTheDocument();
         expect(saved).toEqual({ metadata: { instrument: "harp" } });
     });
+
+    it("waits for an existing account before showing its instrument confirmation", async () => {
+        setToken("valid-token");
+        let accountRequests = 0;
+        let resolveAccount: (() => void) | undefined;
+        let saved: unknown;
+        const current = {
+            id: 1,
+            username: "Alice",
+            channels: [],
+            metadata: { harmonie: {} as { instrument?: string } },
+        };
+        server.use(
+            http.get(`${api}/me`, async () => {
+                accountRequests++;
+                if (accountRequests === 2) {
+                    await new Promise<void>((resolve) => {
+                        resolveAccount = resolve;
+                    });
+                }
+                return HttpResponse.json(current);
+            }),
+            http.post(`${api}/user/edit`, async ({ request }) => {
+                saved = await request.json();
+                current.metadata.harmonie.instrument = "harp";
+                return HttpResponse.json(current);
+            }),
+        );
+
+        const { router } = renderApp("/profil/instrument");
+        await userEvent.click(await screen.findByRole("radio", { name: "Harpe" }));
+        await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
+
+        await waitFor(() => expect(router.state.location.pathname).toBe("/profil/confirmation"));
+        expect(screen.getByText("Chargement du profil…")).toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "Tu fais partie de la communauté Harmonie" })).not.toBeInTheDocument();
+
+        resolveAccount?.();
+        expect(await screen.findByText("Alice")).toBeInTheDocument();
+        expect(screen.getByText("Harpe")).toBeInTheDocument();
+        await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
+
+        await waitFor(() => expect(saved).toEqual({ metadata: { instrument: "harp" } }));
+        expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+    });
+
+    it("shows the account error instead of an incomplete confirmation", async () => {
+        setToken("valid-token");
+        let accountRequests = 0;
+        server.use(
+            http.get(`${api}/me`, () => {
+                accountRequests++;
+                return accountRequests === 1
+                    ? HttpResponse.json({ id: 1, username: "Alice", channels: [], metadata: { harmonie: {} } })
+                    : new HttpResponse(null, { status: 503 });
+            }),
+        );
+
+        renderApp("/profil/instrument");
+        await userEvent.click(await screen.findByRole("radio", { name: "Harpe" }));
+        await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
+
+        expect(await screen.findByRole("alert")).toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "Tu fais partie de la communauté Harmonie" })).not.toBeInTheDocument();
+    });
 });

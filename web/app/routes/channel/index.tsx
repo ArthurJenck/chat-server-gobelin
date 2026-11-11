@@ -12,8 +12,8 @@ export default function ChannelPage() {
     const id = Number(channelId);
     const { account, loading: accountLoading, error: accountError } = useAccount();
     const {
-        channel, messages, keyChannelId, keyState, content, setContent,
-        busy, keyBusy, error, submit, toggleKey,
+        channel, hasKey, messages, loading, keyChannelId, keyState, content,
+        setContent, busy, keyBusy, error, submit, toggleKey,
     } = useChannelChat(id, account);
     const textarea = useRef<HTMLTextAreaElement>(null);
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
@@ -60,7 +60,7 @@ export default function ChannelPage() {
                     <img src="/pictos/arrow.svg" alt="" />
                 </Link>
                 <h1 className="channel-title">{channel?.name ?? "Groupe"}</h1>
-                {account && keyChannelId !== null && (
+                {hasKey && account && keyChannelId !== null && (
                     <KeyControl
                         state={keyState}
                         userId={account.id}
@@ -69,7 +69,7 @@ export default function ChannelPage() {
                     />
                 )}
             </header>
-            {(accountLoading || (channel && keyChannelId === null && !error)) && (
+            {(accountLoading || (channel && loading && !error)) && (
                 <p className="channel-status">Chargement des messages…</p>
             )}
             {(accountError || error) && <p className="channel-status" role="alert">{accountError || error}</p>}
@@ -90,7 +90,7 @@ export default function ChannelPage() {
                         className="channel-send"
                         type="submit"
                         aria-label="Envoyer"
-                        disabled={!content.trim() || busy || keyChannelId === null}
+                        disabled={!content.trim() || busy || (hasKey && keyChannelId === null)}
                     />
                 </form>
             )}

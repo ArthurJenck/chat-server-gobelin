@@ -221,6 +221,43 @@ describe("Harmonie", () => {
         expect(enterCount).toBe(0);
     });
 
+    it("does not load the key in another group and still sends messages", async () => {
+        const studio = { id: 7, name: "studio", creation_date: general.creation_date };
+        mockLogin({ ...account, channels: [general, studio] });
+        const requestedChannels: string[] = [];
+        let keyChannelCreates = 0;
+        let sent: unknown;
+        server.use(
+            http.post(`${api}/channel`, () => {
+                keyChannelCreates++;
+                return HttpResponse.json(technical);
+            }),
+            http.get(`${api}/channel/message`, ({ request }) => {
+                requestedChannels.push(new URL(request.url).searchParams.get("channel") ?? "");
+                return HttpResponse.json([]);
+            }),
+            http.post(`${api}/channel/message`, async ({ request }) => {
+                sent = await request.json();
+                return HttpResponse.json({ id: 1 });
+            }),
+        );
+        renderApp("/login");
+        await signIn();
+        await userEvent.click(await screen.findByRole("link", { name: "studio" }));
+        expect(await screen.findByRole("heading", { name: "studio" })).toBeInTheDocument();
+        await waitFor(() => expect(requestedChannels).toContain("7"));
+        expect(screen.queryByRole("checkbox", { name: "Clé récupérée" })).not.toBeInTheDocument();
+        await userEvent.type(screen.getByLabelText("Message"), "Bonjour");
+        await userEvent.click(screen.getByRole("button", { name: "Envoyer" }));
+        await waitFor(() => expect(sent).toEqual({
+            channel: 7,
+            content: "Bonjour",
+            metadata: { instrument: "guitar" },
+        }));
+        expect(requestedChannels.every((id) => id === "7")).toBe(true);
+        expect(keyChannelCreates).toBe(0);
+    });
+
     it("sends a message with an instrument and plays a foreign message on piano", async () => {
         mockLogin();
         const messages = [

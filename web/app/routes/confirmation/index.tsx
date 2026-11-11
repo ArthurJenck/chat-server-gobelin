@@ -11,6 +11,7 @@ import { PATHS } from "../../shared/config";
 
 export default function Confirmation() {
     const navigate = useNavigate();
+    const hasSession = Boolean(getToken());
     const { registration, setRegistration, selectedInstrument, setSelectedInstrument } = useRegistration();
     const { account, loading, error: accountError } = useAccount(false, false);
     const [busy, setBusy] = useState(false);
@@ -29,7 +30,7 @@ export default function Confirmation() {
 
     async function continueToApp() {
         if (!selectedInstrument || busy) return;
-        if (!registration && !account) return;
+        if (hasSession ? !account : !registration) return;
         setBusy(true);
         setError("");
         try {
@@ -40,7 +41,7 @@ export default function Confirmation() {
                 void navigate(accountInstrument(account) ? PATHS.profile : PATHS.home, {
                     replace: true,
                 });
-            } else if (registration) {
+            } else if (!hasSession && registration) {
                 if (!created) {
                     await register(registration.username, registration.password, selectedInstrument);
                     setCreated(true);
@@ -62,7 +63,28 @@ export default function Confirmation() {
         }
     }
 
-    const username = account?.username ?? registration?.username;
+    if (hasSession && (loading || !account)) {
+        return (
+            <main className="confirmation-page">
+                <button
+                    className="confirmation-back"
+                    type="button"
+                    aria-label="Retour"
+                    onClick={() => void navigate(PATHS.instrument)}
+                >
+                    <img src="/pictos/arrow.svg" alt="" />
+                </button>
+                {loading ? (
+                    <p>Chargement du profil…</p>
+                ) : (
+                    <p role="alert">{accountError || "Compte indisponible."}</p>
+                )}
+            </main>
+        );
+    }
+
+    const username = hasSession ? account?.username : registration?.username;
+    if (!selectedInstrument) return null;
 
     return (
         <ProfileSummary
@@ -70,7 +92,7 @@ export default function Confirmation() {
             instrument={selectedInstrument}
             onBack={() => void navigate(PATHS.instrument)}
         >
-            {(accountError || error) && <p role="alert">{accountError || error}</p>}
+            {error && <p role="alert">{error}</p>}
             <DottedButton
                 className="confirmation-submit"
                 iconSrc="/pictos/arrow.svg"

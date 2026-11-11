@@ -23,7 +23,7 @@ export default function Login() {
             setToken(token);
             void navigate("/", { replace: true });
         } catch {
-            setError("Nom d’utilisateur ou mot de passe incorrecte");
+            setError("Nom d’utilisateur ou mot de passe incorrect");
         } finally {
             setBusy(false);
         }
@@ -31,11 +31,19 @@ export default function Login() {
 
     return (
         <main
-            className={error ? "auth-page login-page login-page-error" : "auth-page login-page"}
+            className={
+                error
+                    ? "auth-page login-page login-page-error"
+                    : "auth-page login-page"
+            }
         >
             <div className="auth-content">
                 <h1>Se connecter</h1>
-                {error && <p id="login-error" role="alert">{error}</p>}
+                {error && (
+                    <p id="login-error" role="alert">
+                        {error}
+                    </p>
+                )}
                 <AuthForm
                     mode="login"
                     username={username}

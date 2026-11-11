@@ -30,10 +30,10 @@ function message(id: number, content: string, userId = 2): Message {
     };
 }
 
-function mockChannel(messages: Message[], keyMessages: Message[] = []) {
+function mockChannel(messages: Message[], keyMessages: Message[] = [], current = account) {
     setToken("test-token");
     server.use(
-        http.get(`${api}/me`, () => HttpResponse.json(account)),
+        http.get(`${api}/me`, () => HttpResponse.json(current)),
         http.get(`${api}/channel/message`, ({ request }) => HttpResponse.json(
             new URL(request.url).searchParams.get("channel") === "9"
                 ? keyMessages
@@ -95,7 +95,7 @@ describe("Channel page", () => {
         if (originalWidth) Object.defineProperty(HTMLElement.prototype, "clientWidth", originalWidth);
     });
 
-    it("renders the supplied pictograms, key state and current author", async () => {
+    it("renders the supplied pictograms and current author without a key in other groups", async () => {
         mockChannel([message(1, "J'ai les clés !"), message(2, "Merci !!!", 1)]);
         renderApp("/channels/5");
 
@@ -103,21 +103,27 @@ describe("Channel page", () => {
         await waitFor(() => expect(screen.getByText("Moi")).toBeInTheDocument());
         expect(screen.getByRole("link", { name: "Retour aux channels" })).toHaveAttribute("href", "/");
         expect(document.querySelector(".channel-back img")).toHaveAttribute("src", "/pictos/arrow.svg");
-        expect(document.querySelector(".channel-key-star")).toHaveAttribute("src", "/pictos/star.svg");
+        expect(document.querySelector(".channel-key-star")).toBeNull();
         expect(document.querySelector(".channel-key-symbol")).toBeNull();
         expect(document.querySelector(".channel-message-author-own img")).toHaveAttribute("src", "/pictos/note.svg");
         expect(document.querySelectorAll(".channel-staff-coda")).toHaveLength(4);
-        expect(screen.getByRole("checkbox", { name: "Clé récupérée" })).not.toBeChecked();
+        expect(screen.queryByRole("checkbox", { name: "Clé récupérée" })).not.toBeInTheDocument();
         await userEvent.click(screen.getByRole("link", { name: "Retour aux channels" }));
         expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
     });
 
-    it("shows the key over the star and locks it when another user holds it", async () => {
+    it("shows the key over the star in general and locks it when another user holds it", async () => {
         mockChannel([], [{
             ...message(1, "Clé récupérée"),
             creation_date: new Date().toISOString(),
             metadata: { harmonie: { type: "classroom_key", action: "claim" } },
-        }]);
+        }], {
+            ...account,
+            channels: [
+                { ...account.channels![0], name: "general" },
+                account.channels![1],
+            ],
+        });
         renderApp("/channels/5");
 
         const checkbox = await screen.findByRole("checkbox", { name: "Clé récupérée" });

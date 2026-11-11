@@ -24,9 +24,11 @@ export function useChannelChat(id: number, account: Account | null) {
     const channel = account?.channels?.find(
         (item) => item.id === id && item.name !== KEY_CHANNEL_NAME,
     );
+    const hasKey = channel?.name === "general";
     const [messages, setMessages] = useState<Message[]>([]);
     const [keyChannelId, setKeyChannelId] = useState<number | null>(null);
     const [keyState, setKeyState] = useState<KeyState>(AVAILABLE_KEY);
+    const [loading, setLoading] = useState(true);
     const [content, setContent] = useState("");
     const [busy, setBusy] = useState(false);
     const [keyBusy, setKeyBusy] = useState(false);
@@ -39,10 +41,12 @@ export function useChannelChat(id: number, account: Account | null) {
     }
 
     const refresh = useCallback(
-        async (technicalId: number) => {
+        async (technicalId: number | null) => {
             const [nextMessages, nextKey] = await Promise.all([
                 getMessages(id),
-                readKeyState(technicalId),
+                technicalId === null
+                    ? Promise.resolve(AVAILABLE_KEY)
+                    : readKeyState(technicalId),
             ]);
             setMessages(
                 nextMessages.filter(
@@ -58,33 +62,39 @@ export function useChannelChat(id: number, account: Account | null) {
         if (!account || !channel) return;
         let active = true;
         let timer: ReturnType<typeof setInterval> | undefined;
-        ensureKeyChannel(account)
-            .then(async (technical) => {
-                if (!active) return;
-                setKeyChannelId(technical.id);
-                await refresh(technical.id);
-                if (active)
-                    timer = setInterval(() => {
-                        if (document.visibilityState === "visible")
-                            void refresh(technical.id).catch((cause: unknown) =>
-                                handleError(cause, "Actualisation impossible."),
-                            );
-                    }, MESSAGE_REFRESH_MS);
-            })
+        setLoading(true);
+        setKeyChannelId(null);
+        (async () => {
+            const technicalId = hasKey ? (await ensureKeyChannel(account)).id : null;
+            if (!active) return;
+            setKeyChannelId(technicalId);
+            await refresh(technicalId);
+            if (active) {
+                setLoading(false);
+                timer = setInterval(() => {
+                    if (document.visibilityState === "visible")
+                        void refresh(technicalId).catch((cause: unknown) =>
+                            handleError(cause, "Actualisation impossible."),
+                        );
+                }, MESSAGE_REFRESH_MS);
+            }
+        })()
             .catch((cause: unknown) => {
-                if (active) handleError(cause, "Chargement impossible.");
+                if (!active) return;
+                setLoading(false);
+                handleError(cause, "Chargement impossible.");
             });
         return () => {
             active = false;
             if (timer) clearInterval(timer);
         };
-    }, [account, channel?.id, refresh]);
+    }, [account, channel?.id, hasKey, refresh]);
 
     async function submit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const text = content.trim();
         const instrument = account && accountInstrument(account);
-        if (!text || !instrument || keyChannelId === null || busy) return;
+        if (!text || !instrument || (hasKey && keyChannelId === null) || busy) return;
         setBusy(true);
         setError("");
         try {
@@ -99,7 +109,7 @@ export function useChannelChat(id: number, account: Account | null) {
     }
 
     async function toggleKey() {
-        if (!account || keyChannelId === null || keyBusy) return;
+        if (!hasKey || !account || keyChannelId === null || keyBusy) return;
         setKeyBusy(true);
         setError("");
         try {
@@ -113,7 +123,9 @@ export function useChannelChat(id: number, account: Account | null) {
 
     return {
         channel,
+        hasKey,
         messages,
+        loading,
         keyChannelId,
         keyState,
         content,
