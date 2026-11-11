@@ -9,7 +9,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import type { Route } from "./+types/root";
-import InstallPrompt from "./InstallPrompt";
 import "./tokens.css";
 
 export const links: Route.LinksFunction = () => [
@@ -23,7 +22,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <html lang="fr">
             <head>
                 <meta charSet="utf-8" />
-                <meta name="theme-color" content="#ffffff" />
+                <meta name="theme-color" content="#FFFEF3" />
                 <meta
                     name="viewport"
                     content="width=device-width, initial-scale=1"
@@ -83,7 +82,6 @@ export default function App() {
                 </p>
             )}
             <Outlet />
-            <InstallPrompt />
         </>
     );
 }

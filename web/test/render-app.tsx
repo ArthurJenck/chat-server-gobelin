@@ -4,6 +4,7 @@ import App from "../app/root";
 import ChannelPage from "../app/routes/channel";
 import Home from "../app/routes/home";
 import Login from "../app/routes/login";
+import Welcome from "../app/routes/welcome";
 import Register from "../app/routes/register";
 import SoundLab from "../app/routes/sound-lab";
 import Profile from "../app/routes/profile";
@@ -17,6 +18,7 @@ export function renderApp(path = "/") {
                 element: <App />,
                 children: [
                     { path: "/", element: <Home /> },
+                    { path: "/bienvenue", element: <Welcome /> },
                     { path: "/login", element: <Login /> },
                     { path: "/register", element: <Register /> },
                     { path: "/profil", element: <Profile /> },

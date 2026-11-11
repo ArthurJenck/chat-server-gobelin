@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { getToken } from "../features/auth/token";
+import { PATHS } from "../shared/config";
 import { startPlayback } from "../features/sound/audioEngine";
 import SoundSettingsPanel from "../features/sound/gui/SoundSettingsPanel";
 import {
@@ -180,7 +181,7 @@ export default function SoundLab() {
                     <button type="button" disabled={!playing} onClick={stop}>
                         Stop
                     </button>
-                    <Link to={getToken() ? "/" : "/login"}>Retour</Link>
+                    <Link to={getToken() ? PATHS.home : PATHS.welcome}>Retour</Link>
                     {error && <p role="alert">{error}</p>}
                 </form>
                 <SoundStaff

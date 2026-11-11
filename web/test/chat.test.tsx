@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Account } from "../app/features/users/types";
+import { setToken } from "../app/features/auth/token";
 import { keyStateFromMessages } from "../app/features/key/keyState";
 import { renderApp } from "./render-app";
 import { server } from "./setup";
@@ -57,7 +58,26 @@ describe("Harmonie", () => {
     it("requires a session", async () => {
         renderApp("/");
         expect(
+            await screen.findByRole("heading", {
+                name: "Bienvenue à Harmonie",
+            }),
+        ).toBeInTheDocument();
+        await userEvent.click(screen.getByRole("button", { name: "C'est parti !" }));
+        expect(
             await screen.findByRole("heading", { name: "Connexion" }),
+        ).toBeInTheDocument();
+    });
+
+    it("returns to welcome when the session has expired", async () => {
+        setToken("expired-token");
+        server.use(
+            http.get(`${api}/me`, () => new HttpResponse(null, { status: 401 })),
+        );
+        renderApp("/");
+        expect(
+            await screen.findByRole("heading", {
+                name: "Bienvenue à Harmonie",
+            }),
         ).toBeInTheDocument();
     });
 
@@ -102,6 +122,12 @@ describe("Harmonie", () => {
         expect(
             screen.queryByRole("button", { name: /modifier.*utilisateur/i }),
         ).not.toBeInTheDocument();
+        await userEvent.click(screen.getByRole("button", { name: "Se déconnecter" }));
+        expect(
+            await screen.findByRole("heading", {
+                name: "Bienvenue à Harmonie",
+            }),
+        ).toBeInTheDocument();
     });
 
     it("joins an existing group from the common form", async () => {
@@ -160,6 +186,13 @@ describe("Harmonie", () => {
                                   user: "Zoe",
                                   creation_date: new Date().toISOString(),
                               },
+                              {
+                                  id: 2,
+                                  content: "clock_tick",
+                                  user_id: 2,
+                                  user: "Zoe",
+                                  creation_date: new Date().toISOString(),
+                              },
                           ]
                         : [],
                 );
@@ -171,6 +204,7 @@ describe("Harmonie", () => {
             await screen.findByRole("link", { name: "general" }),
         );
         expect(await screen.findByText("Bonjour")).toBeInTheDocument();
+        expect(screen.queryByText("clock_tick")).not.toBeInTheDocument();
         expect(
             await screen.findByRole("checkbox", { name: "Clé récupérée" }),
         ).toBeInTheDocument();

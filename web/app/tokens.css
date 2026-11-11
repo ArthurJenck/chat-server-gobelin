@@ -82,3 +82,57 @@
     --reference-coda-small-height: 10px;
     --reference-coda-large-height: 40px;
 }
+
+html,
+body {
+    background-color: var(--color-background);
+    color: var(--color-ink);
+    font-family: var(--font-family-interface);
+    font-style: var(--font-style-interface);
+    letter-spacing: var(--letter-spacing-text);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 400;
+}
+
+a,
+a:visited {
+    color: var(--color-ink);
+}
+
+button,
+input,
+select,
+textarea {
+    background-color: var(--color-background);
+    color: var(--color-ink);
+    font-family: inherit;
+    font-style: inherit;
+    letter-spacing: inherit;
+    accent-color: var(--color-ink);
+}
+
+.chat-page > header h1 {
+    font-size: var(--font-size-group-title);
+}
+
+.chat-message-user {
+    font-size: var(--font-size-username);
+}
+
+.chat-message-body {
+    font-family: var(--font-family-message);
+    font-size: var(--font-size-message-body);
+    font-style: normal;
+    font-weight: var(--font-weight-message);
+}
+
+#message-content {
+    font-size: var(--font-size-message-input);
+}

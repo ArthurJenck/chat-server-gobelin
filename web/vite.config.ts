@@ -25,7 +25,7 @@ export default defineConfig({
                     },
                 ],
             },
-            includeAssets: ["favicon.ico", "apple-touch-icon.png"],
+            includeAssets: ["favicon.ico", "apple-touch-icon.png", "fonts/angeris-disco.ttf"],
             manifest: {
                 name: "Gobelins PWA Tchat",
                 short_name: "Gob Tchat",
@@ -33,8 +33,8 @@ export default defineConfig({
                 lang: "fr",
                 start_url: "/",
                 scope: "/",
-                theme_color: "#ffffff",
-                background_color: "#ffffff",
+                theme_color: "#FFFEF3",
+                background_color: "#FFFEF3",
                 display: "standalone",
                 icons: [
                     {

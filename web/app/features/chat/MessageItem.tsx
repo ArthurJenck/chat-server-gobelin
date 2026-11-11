@@ -73,7 +73,7 @@ export default function MessageItem({
         <li>
             <article>
                 <header>
-                    <h3>
+                    <h3 className="chat-message-user">
                         {message.user}
                         {hasKey ? " (détient la clé)" : ""}
                     </h3>
@@ -83,7 +83,7 @@ export default function MessageItem({
                         )}
                     </time>
                 </header>
-                <p>{message.content}</p>
+                <p className="chat-message-body">{message.content}</p>
                 <figure>
                     <figcaption>Portée musicale du message</figcaption>
                 </figure>

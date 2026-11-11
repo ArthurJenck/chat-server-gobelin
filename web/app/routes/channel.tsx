@@ -37,7 +37,7 @@ export default function ChannelPage() {
         );
 
     return (
-        <main>
+        <main className="chat-page">
             <PageHeader title={channel?.name ?? "Groupe"} back={PATHS.home} />
             {account && keyChannelId !== null && (
                 <KeyControl

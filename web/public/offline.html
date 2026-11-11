@@ -3,7 +3,34 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#FFFEF3" />
         <title>Hors ligne</title>
+        <style>
+            @font-face {
+                font-family: "Angeris Disco";
+                src: url("/fonts/angeris-disco.ttf") format("truetype");
+                font-style: italic;
+                font-weight: 400;
+            }
+
+            :root {
+                --color-background: #FFFEF3;
+                --color-ink: #000000;
+                --font-family-interface: "Angeris Disco";
+            }
+
+            html,
+            body {
+                background-color: var(--color-background);
+                color: var(--color-ink);
+                font-family: var(--font-family-interface);
+                font-style: italic;
+            }
+
+            h1 {
+                font-weight: 400;
+            }
+        </style>
     </head>
     <body>
         <main>

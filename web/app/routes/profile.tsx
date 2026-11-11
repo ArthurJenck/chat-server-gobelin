@@ -13,7 +13,7 @@ export default function Profile() {
 
     function logout() {
         clearToken();
-        void navigate(PATHS.login, { replace: true });
+        void navigate(PATHS.welcome, { replace: true });
     }
 
     return (

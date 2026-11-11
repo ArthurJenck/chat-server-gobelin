@@ -34,7 +34,7 @@ export function useChannelChat(id: number, account: Account | null) {
 
     function handleError(cause: unknown, fallback: string) {
         if (cause instanceof ApiError && cause.status === 401)
-            void navigate(PATHS.login, { replace: true });
+            void navigate(PATHS.welcome, { replace: true });
         else setError(cause instanceof Error ? cause.message : fallback);
     }
 
@@ -44,7 +44,11 @@ export function useChannelChat(id: number, account: Account | null) {
                 getMessages(id),
                 readKeyState(technicalId),
             ]);
-            setMessages(nextMessages);
+            setMessages(
+                nextMessages.filter(
+                    (message) => !message.content.includes("clock tick"),
+                ),
+            );
             setKeyState(nextKey);
         },
         [id],

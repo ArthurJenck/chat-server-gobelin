@@ -31,7 +31,7 @@ it("opens the sound workshop without signing in", async () => {
     expect(screen.getByRole("button", { name: "Play" })).toBeDisabled();
     expect(screen.getByRole("link", { name: "Retour" })).toHaveAttribute(
         "href",
-        "/login",
+        "/bienvenue",
     );
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
 });

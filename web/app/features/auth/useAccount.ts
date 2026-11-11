@@ -15,7 +15,7 @@ export function useAccount(requireInstrument = true) {
 
     useEffect(() => {
         if (!getToken()) {
-            void navigate(PATHS.login, { replace: true });
+            void navigate(PATHS.welcome, { replace: true });
             return;
         }
         let active = true;
@@ -29,7 +29,7 @@ export function useAccount(requireInstrument = true) {
             .catch((cause: unknown) => {
                 if (!active) return;
                 if (cause instanceof ApiError && cause.status === 401)
-                    void navigate(PATHS.login, { replace: true });
+                    void navigate(PATHS.welcome, { replace: true });
                 else
                     setError(
                         cause instanceof Error

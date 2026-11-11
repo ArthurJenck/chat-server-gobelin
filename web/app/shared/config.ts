@@ -5,6 +5,7 @@ export const PARIS_TIME_ZONE = "Europe/Paris";
 
 export const PATHS = {
     home: "/",
+    welcome: "/bienvenue",
     login: "/login",
     profile: "/profil",
     instrument: "/profil/instrument",
