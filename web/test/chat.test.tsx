@@ -206,7 +206,10 @@ describe("Harmonie", () => {
         await userEvent.click(
             await screen.findByRole("link", { name: "general" }),
         );
-        expect(await screen.findByText("Bonjour")).toBeInTheDocument();
+        await waitFor(() => expect(
+            Array.from(document.querySelectorAll(".channel-sheet[aria-hidden='false'] .emphasized-text-face"),
+                (node) => node.textContent).join(""),
+        ).toBe("Bonjour"));
         expect(
             await screen.findByRole("checkbox", { name: "Clé récupérée" }),
         ).toBeInTheDocument();
@@ -253,10 +256,11 @@ describe("Harmonie", () => {
         await userEvent.click(
             await screen.findByRole("link", { name: "general" }),
         );
-        expect(await screen.findByText("Bonjour")).toBeInTheDocument();
-        expect(
-            screen.getByText("Portée musicale du message"),
-        ).toBeInTheDocument();
+        await waitFor(() => expect(
+            Array.from(document.querySelectorAll(".channel-sheet[aria-hidden='false'] .emphasized-text-face"),
+                (node) => node.textContent).join(""),
+        ).toBe("Bonjour"));
+        expect(document.querySelectorAll(".channel-staff-lines line")).toHaveLength(10);
         await userEvent.click(
             screen.getByRole("button", { name: "Lire le message" }),
         );
@@ -264,7 +268,7 @@ describe("Harmonie", () => {
         expect(playback.start.mock.calls[0][1].instrument).toBe("piano");
         await userEvent.type(screen.getByLabelText("Message"), " Salut ");
         await userEvent.click(screen.getByRole("button", { name: "Envoyer" }));
-        expect(await screen.findByText("Salut")).toBeInTheDocument();
+        await waitFor(() => expect(screen.getByText("Moi")).toBeInTheDocument());
         expect(sent).toEqual({
             channel: 5,
             content: "Salut",

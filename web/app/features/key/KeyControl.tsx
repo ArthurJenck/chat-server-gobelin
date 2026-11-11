@@ -12,11 +12,11 @@ export default function KeyControl({
     onChange: () => void;
 }) {
     return (
-        <section aria-labelledby="key-heading">
-            <h2 id="key-heading">Clé de la salle</h2>
-            <label>
+        <div className="channel-key-control">
+            <label className="channel-key-label">
                 <input
                     type="checkbox"
+                    aria-label="Clé récupérée"
                     checked={state.holderId !== null}
                     disabled={
                         busy ||
@@ -24,13 +24,16 @@ export default function KeyControl({
                     }
                     onChange={onChange}
                 />
-                Clé récupérée
+                <img className="channel-key-star" src="/pictos/star.svg" alt="" />
+                {state.holderId !== null && (
+                    <img className="channel-key-symbol" src="/pictos/key.svg" alt="" />
+                )}
             </label>
-            <p role="status">
+            <span className="channel-screen-reader" role="status">
                 {state.holderName
                     ? `Clé détenue par ${state.holderName}`
                     : "Clé disponible"}
-            </p>
-        </section>
+            </span>
+        </div>
     );
 }

@@ -1,28 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Message } from "../messages/types";
+import EmphasizedText from "../../components/EmphasizedText";
 import { startPlayback } from "../sound/audioEngine";
-import {
-    DEFAULT_SOUND_SETTINGS,
-    withInstrumentProfile,
-} from "../sound/soundConfig";
-import { createSoundPlan } from "../sound/soundPlan";
+import { withInstrumentProfile } from "../sound/soundConfig";
+import { CHANNEL_SOUND_SETTINGS, type ChannelStaffBlock } from "./channelPagination";
 import { messageInstrument } from "./messageSound";
 
 export default function MessageItem({
-    message,
-    hasKey,
+    block,
+    isOwn,
 }: {
-    message: Message;
-    hasKey: boolean;
+    block: ChannelStaffBlock;
+    isOwn: boolean;
 }) {
-    const instrument = messageInstrument(message);
+    const { message, plan, row, first } = block;
     const settings = useMemo(
-        () => withInstrumentProfile(DEFAULT_SOUND_SETTINGS, instrument),
-        [instrument],
-    );
-    const plan = useMemo(
-        () => createSoundPlan(message.content, settings),
-        [message.content, settings],
+        () => withInstrumentProfile(CHANNEL_SOUND_SETTINGS, messageInstrument(message)),
+        [message],
     );
     const [playing, setPlaying] = useState(false);
     const [error, setError] = useState("");
@@ -60,42 +53,47 @@ export default function MessageItem({
         } catch (cause) {
             if (playId.current === id) {
                 setPlaying(false);
-                setError(
-                    cause instanceof Error
-                        ? cause.message
-                        : "Lecture impossible.",
-                );
+                setError(cause instanceof Error ? cause.message : "Lecture impossible.");
             }
         }
     }
 
     return (
-        <li>
-            <article>
-                <header>
-                    <h3 className="chat-message-user">
-                        {message.user}
-                        {hasKey ? " (détient la clé)" : ""}
-                    </h3>
-                    <time dateTime={message.creation_date}>
-                        {new Date(message.creation_date).toLocaleString(
-                            "fr-FR",
-                        )}
-                    </time>
-                </header>
-                <p className="chat-message-body">{message.content}</p>
-                <figure>
-                    <figcaption>Portée musicale du message</figcaption>
-                </figure>
-                <button
-                    type="button"
-                    onClick={() => void togglePlayback()}
-                    disabled={!plan.events.length}
-                >
-                    {playing ? "Arrêter la lecture" : "Lire le message"}
-                </button>
-                {error && <p role="alert">{error}</p>}
-            </article>
+        <li className="channel-message">
+            {first && (
+                <div className={`channel-message-author${isOwn ? " channel-message-author-own" : ""}`}>
+                    <span>{isOwn ? "Moi" : message.user}</span>
+                    {isOwn && <img src="/pictos/note.svg" alt="" />}
+                </div>
+            )}
+            <button
+                className="channel-staff"
+                type="button"
+                aria-label={playing ? "Arrêter la lecture" : "Lire le message"}
+                disabled={!plan.events.length}
+                onClick={() => void togglePlayback()}
+            >
+                <svg className="channel-staff-lines" aria-hidden="true" viewBox="0 0 360 40" preserveAspectRatio="none">
+                    <g className="channel-staff-lines-blur">
+                        {[0, 10, 20, 30, 40].map((y) => <line key={y} x1="0" x2="360" y1={y} y2={y} />)}
+                    </g>
+                    <g>
+                        {[0, 10, 20, 30, 40].map((y) => <line key={y} x1="0" x2="360" y1={y} y2={y} />)}
+                    </g>
+                </svg>
+                <img className="channel-staff-coda channel-staff-coda-left" src="/pictos/coda.svg" alt="" />
+                {row.map((group) => (
+                    <span
+                        key={group.eventIndex}
+                        className="channel-syllable"
+                        style={{ left: `${group.x}px`, top: `${group.y}px` }}
+                    >
+                        <EmphasizedText>{group.text}</EmphasizedText>
+                    </span>
+                ))}
+                <img className="channel-staff-coda channel-staff-coda-right" src="/pictos/coda.svg" alt="" />
+            </button>
+            {error && <p role="alert">{error}</p>}
         </li>
     );
 }

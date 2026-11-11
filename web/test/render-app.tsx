@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import App from "../app/root";
-import ChannelPage from "../app/routes/channel";
+import ChannelPage from "../app/routes/channel/index";
 import Home from "../app/routes/home";
 import Login from "../app/routes/login/index";
 import ForgotPassword from "../app/routes/forgot-password/index";

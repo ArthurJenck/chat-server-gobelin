@@ -1,0 +1,333 @@
+.channel-page {
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    max-width: 402px;
+    flex-direction: column;
+    margin: 0 auto;
+    overflow: hidden;
+    background: var(--color-background);
+}
+
+.channel-page::before,
+.channel-page::after {
+    position: absolute;
+    right: 0;
+    left: 0;
+    z-index: 10;
+    height: 163px;
+    content: "";
+    pointer-events: none;
+}
+
+.channel-page::before {
+    top: 0;
+    background: linear-gradient(to bottom, rgb(77 248 231 / 15%), transparent);
+}
+
+.channel-page::after {
+    bottom: 0;
+    background: linear-gradient(to top, rgb(77 248 231 / 15%), transparent);
+}
+
+.channel-header {
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    display: flex;
+    height: 63px;
+    flex: none;
+    align-items: center;
+    gap: 20px;
+    margin: 44px 20px 33px;
+}
+
+.channel-back {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    place-items: center;
+    border: 0.4px dashed var(--color-ink);
+    border-radius: 50%;
+}
+
+.channel-back img {
+    display: block;
+    width: 35px;
+    height: 28px;
+}
+
+.channel-title {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+    overflow: hidden;
+    font-size: var(--font-size-group-title);
+    font-weight: 400;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.channel-key-control,
+.channel-key-label {
+    position: relative;
+    display: block;
+    width: 62px;
+    height: 63px;
+    flex: none;
+}
+
+.channel-key-label input {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.channel-key-label input:disabled {
+    cursor: default;
+}
+
+.channel-key-label input:focus-visible + .channel-key-star {
+    outline: 1px solid var(--color-ink);
+}
+
+.channel-key-star {
+    position: absolute;
+    inset: 0;
+    width: 62px;
+    height: 63px;
+}
+
+.channel-key-symbol {
+    position: absolute;
+    top: -8px;
+    left: 13px;
+    width: 36px;
+    height: 78px;
+}
+
+.channel-messages {
+    position: relative;
+    z-index: 1;
+    min-height: 0;
+    flex: 1;
+    margin: -25px 0 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    touch-action: pan-x;
+}
+
+.channel-messages::-webkit-scrollbar {
+    display: none;
+}
+
+.channel-page[data-keyboard-open="true"] .channel-messages {
+    mask-image: linear-gradient(to bottom, transparent, black 40px);
+}
+
+.channel-page-track {
+    position: relative;
+    height: 100%;
+}
+
+.channel-page-stage {
+    position: sticky;
+    left: 0;
+    height: 100%;
+    perspective: 1200px;
+    transform-style: preserve-3d;
+}
+
+.channel-sheet {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 0;
+    box-sizing: border-box;
+    padding: 25px 20px;
+    background: var(--color-background);
+    backface-visibility: hidden;
+    list-style: none;
+    transform-origin: calc(100% - 20px) 50%;
+    transform-style: preserve-3d;
+}
+
+.channel-message {
+    width: 100%;
+    flex: none;
+}
+
+.channel-message-author {
+    box-sizing: border-box;
+    display: flex;
+    height: 20px;
+    align-items: flex-start;
+    gap: 2px;
+    font-size: var(--font-size-username);
+    line-height: 20px;
+}
+
+.channel-message-author-own {
+    justify-content: flex-end;
+}
+
+.channel-message-author img {
+    display: block;
+    width: 9px;
+    height: 16px;
+}
+
+.channel-staff {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-ink);
+    cursor: pointer;
+    text-align: left;
+}
+
+.channel-staff-lines {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 40px;
+    overflow: visible;
+}
+
+.channel-staff-lines line {
+    shape-rendering: crispEdges;
+    stroke: currentColor;
+    stroke-width: 0.3px;
+}
+
+.channel-staff-lines-blur {
+    filter: blur(4px);
+}
+
+.channel-staff-coda {
+    position: absolute;
+    top: 0;
+    display: block;
+    width: 2px;
+    height: 40px;
+}
+
+.channel-staff-coda-left {
+    left: 0;
+}
+
+.channel-staff-coda-right {
+    right: 0;
+}
+
+.channel-syllable {
+    position: absolute;
+    z-index: 1;
+    font-family: var(--font-family-message);
+    font-size: var(--font-size-message-body);
+    font-style: normal;
+    font-weight: var(--font-weight-message);
+    line-height: 1;
+    white-space: nowrap;
+    transform: translateY(-50%);
+}
+
+.channel-syllable::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    width: 70px;
+    height: 50px;
+    background: radial-gradient(ellipse, rgb(77 248 231 / 20%), transparent 70%);
+    content: "";
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+.channel-empty {
+    position: relative;
+    margin: 25px 20px;
+}
+
+.channel-composer {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: none;
+    align-items: flex-end;
+    gap: 18px;
+    margin: 20px 20px 30px;
+}
+
+.channel-composer textarea {
+    box-sizing: border-box;
+    display: block;
+    min-width: 0;
+    min-height: 40px;
+    flex: 1;
+    padding: 9px 18px;
+    border: 0.4px dashed var(--color-ink);
+    border-radius: 0;
+    background: var(--color-background);
+    font-size: var(--font-size-message-input);
+    line-height: 20px;
+    outline-offset: 2px;
+    resize: none;
+}
+
+.channel-composer textarea::placeholder {
+    color: rgb(0 0 0 / 45%);
+    opacity: 1;
+}
+
+.channel-send {
+    display: block;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    margin-bottom: 1px;
+    padding: 0;
+    border: 0.4px dashed var(--color-ink);
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+}
+
+.channel-send:disabled {
+    cursor: default;
+}
+
+.channel-screen-reader {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+.channel-status {
+    position: relative;
+    z-index: 2;
+    margin: 0 20px 10px;
+}
