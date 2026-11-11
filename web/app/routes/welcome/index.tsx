@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
-import DottedButton from "../components/DottedButton";
-import { PATHS } from "../shared/config";
+import DottedButton from "../../components/DottedButton";
+import { PATHS } from "../../shared/config";
 import "./welcome.css";
 
 export default function Welcome() {
