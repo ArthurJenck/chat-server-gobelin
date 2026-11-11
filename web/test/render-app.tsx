@@ -10,17 +10,23 @@ import SoundLab from "../app/routes/sound-lab";
 import Profile from "../app/routes/profile";
 import InstrumentPage from "../app/routes/instrument";
 import NewChannel from "../app/routes/new-channel";
+import Guest from "../app/routes/guest";
 
-export function renderApp(path = "/") {
+export function renderApp(path: string | string[] = "/") {
     const router = createMemoryRouter(
         [
             {
                 element: <App />,
                 children: [
                     { path: "/", element: <Home /> },
-                    { path: "/bienvenue", element: <Welcome /> },
-                    { path: "/login", element: <Login /> },
-                    { path: "/register", element: <Register /> },
+                    {
+                        element: <Guest />,
+                        children: [
+                            { path: "/bienvenue", element: <Welcome /> },
+                            { path: "/login", element: <Login /> },
+                            { path: "/register", element: <Register /> },
+                        ],
+                    },
                     { path: "/profil", element: <Profile /> },
                     { path: "/profil/instrument", element: <InstrumentPage /> },
                     { path: "/groupes/nouveau", element: <NewChannel /> },
@@ -29,8 +35,8 @@ export function renderApp(path = "/") {
                 ],
             },
         ],
-        { initialEntries: [path] },
+        { initialEntries: Array.isArray(path) ? path : [path] },
     );
 
-    return render(<RouterProvider router={router} />);
+    return { ...render(<RouterProvider router={router} />), router };
 }

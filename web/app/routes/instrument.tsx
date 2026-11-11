@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import PageHeader from "../components/PageHeader";
+import DottedButton from "../components/DottedButton";
+import InstrumentList from "../components/InstrumentList";
 import { PATHS } from "../shared/config";
 import {
     accountInstrument,
     saveInstrument,
 } from "../features/users/instrument";
 import { useAccount } from "../features/auth/useAccount";
-import { INSTRUMENTS, type Instrument } from "../features/sound/soundConfig";
+import type { Instrument } from "../features/sound/soundConfig";
+import "./instrument.css";
 
 export default function InstrumentPage() {
     const navigate = useNavigate();
@@ -43,39 +45,33 @@ export default function InstrumentPage() {
     }
 
     return (
-        <main>
-            <PageHeader
-                title="Choisir un instrument"
-                back={initial ? PATHS.profile : undefined}
-            />
+        <main className="instrument-page">
+            <h1 id="instrument-title">
+                <span>Choisis ton</span>
+                <span>instrument</span>
+            </h1>
             {loading && <p>Chargement…</p>}
             {accountError && <p role="alert">{accountError}</p>}
             {account && (
-                <form onSubmit={(event) => void submit(event)}>
-                    <fieldset>
-                        <legend>Instruments</legend>
-                        {(
-                            Object.entries(INSTRUMENTS) as [
-                                Instrument,
-                                { label: string },
-                            ][]
-                        ).map(([value, config]) => (
-                            <label key={value}>
-                                <input
-                                    type="radio"
-                                    name="instrument"
-                                    value={value}
-                                    checked={selected === value}
-                                    onChange={() => setSelected(value)}
-                                />
-                                {config.label}
-                            </label>
-                        ))}
-                    </fieldset>
+                <form
+                    className="instrument-form"
+                    onSubmit={(event) => void submit(event)}
+                >
+                    <InstrumentList
+                        selected={selected}
+                        onChange={setSelected}
+                        labelledBy="instrument-title"
+                    />
                     {error && <p role="alert">{error}</p>}
-                    <button type="submit" disabled={!selected || busy}>
+                    <DottedButton
+                        className="instrument-submit"
+                        type="submit"
+                        iconSrc="/pictos/arrow.svg"
+                        emphasized
+                        disabled={!selected || busy}
+                    >
                         Continuer
-                    </button>
+                    </DottedButton>
                 </form>
             )}
         </main>

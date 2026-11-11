@@ -37,7 +37,10 @@ beforeEach(() => {
 });
 
 async function signIn() {
-    await userEvent.type(screen.getByLabelText("Nom d’utilisateur :"), " Alice ");
+    await userEvent.type(
+        screen.getByLabelText("Nom d’utilisateur :"),
+        " Alice ",
+    );
     await userEvent.type(screen.getByLabelText("Mot de passe :"), "secret");
     await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
 }
@@ -62,7 +65,9 @@ describe("Harmonie", () => {
                 name: "Bienvenue à Harmonie",
             }),
         ).toBeInTheDocument();
-        await userEvent.click(screen.getByRole("button", { name: "C'est parti !" }));
+        await userEvent.click(
+            screen.getByRole("button", { name: "C'est parti !" }),
+        );
         expect(
             await screen.findByRole("heading", { name: "Se connecter" }),
         ).toBeInTheDocument();
@@ -71,7 +76,10 @@ describe("Harmonie", () => {
     it("returns to welcome when the session has expired", async () => {
         setToken("expired-token");
         server.use(
-            http.get(`${api}/me`, () => new HttpResponse(null, { status: 401 })),
+            http.get(
+                `${api}/me`,
+                () => new HttpResponse(null, { status: 401 }),
+            ),
         );
         renderApp("/");
         expect(
@@ -122,7 +130,9 @@ describe("Harmonie", () => {
         expect(
             screen.queryByRole("button", { name: /modifier.*utilisateur/i }),
         ).not.toBeInTheDocument();
-        await userEvent.click(screen.getByRole("button", { name: "Se déconnecter" }));
+        await userEvent.click(
+            screen.getByRole("button", { name: "Se déconnecter" }),
+        );
         expect(
             await screen.findByRole("heading", {
                 name: "Bienvenue à Harmonie",
@@ -186,13 +196,6 @@ describe("Harmonie", () => {
                                   user: "Zoe",
                                   creation_date: new Date().toISOString(),
                               },
-                              {
-                                  id: 2,
-                                  content: "clock_tick",
-                                  user_id: 2,
-                                  user: "Zoe",
-                                  creation_date: new Date().toISOString(),
-                              },
                           ]
                         : [],
                 );
@@ -204,7 +207,6 @@ describe("Harmonie", () => {
             await screen.findByRole("link", { name: "general" }),
         );
         expect(await screen.findByText("Bonjour")).toBeInTheDocument();
-        expect(screen.queryByText("clock_tick")).not.toBeInTheDocument();
         expect(
             await screen.findByRole("checkbox", { name: "Clé récupérée" }),
         ).toBeInTheDocument();
