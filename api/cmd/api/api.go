@@ -125,7 +125,7 @@ func main() {
 	router.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
 	router.HandleFunc("/user", userHandler.Create).Methods(http.MethodPost)
 	router.HandleFunc("/user", userHandler.Edit).Methods(http.MethodPut)
-	router.HandleFunc("/user", userHandler.GetAll).Methods(http.MethodGet)
+	router.HandleFunc("/users", userHandler.GetAll).Methods(http.MethodGet)
 	router.HandleFunc("/me", userHandler.Me).Methods(http.MethodGet)
 	router.HandleFunc("/channel/socket", channelHandler.ServeWS).Methods(http.MethodGet)
 	/*router.HandleFunc("/channel", channelHandler.Get).Methods(http.MethodGet)*/
@@ -166,7 +166,15 @@ func setAccessControlHeader(next http.Handler) http.Handler {
 func (amw *authenticationMiddleware) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//No auth required for login
-		if strings.TrimPrefix(r.URL.Path, "/") == "login" || strings.TrimPrefix(r.URL.Path, "/") == "user" {
+		if strings.TrimPrefix(r.URL.Path, "/") == "login" && r.Method == http.MethodPost {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if strings.TrimPrefix(r.URL.Path, "/") == "user" && r.Method == http.MethodPost {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if strings.TrimPrefix(r.URL.Path, "/") == "users" && r.Method == http.MethodGet {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -175,6 +183,7 @@ func (amw *authenticationMiddleware) authMiddleware(next http.Handler) http.Hand
 			next.ServeHTTP(w, r)
 			return
 		}
+
 		tokenStr := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 
 		if tokenStr == "" {
