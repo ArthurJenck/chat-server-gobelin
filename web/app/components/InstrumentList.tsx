@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { playInstrumentPreview, randomPreviewNote } from "../features/sound/instrumentPreview";
 import { INSTRUMENTS, type Instrument } from "../features/sound/soundConfig";
 import "./InstrumentList.css";
 
@@ -46,6 +47,7 @@ export default function InstrumentList({
     labelledBy,
 }: InstrumentListProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const previewRef = useRef<AbortController | null>(null);
     const [canScrollUp, setCanScrollUp] = useState(false);
     const [canScrollDown, setCanScrollDown] = useState(false);
 
@@ -72,6 +74,15 @@ export default function InstrumentList({
         return () => window.removeEventListener("resize", updateOverflow);
     }, []);
 
+    useEffect(() => () => previewRef.current?.abort(), []);
+
+    function preview(instrument: Instrument) {
+        previewRef.current?.abort();
+        const controller = new AbortController();
+        previewRef.current = controller;
+        void playInstrumentPreview(instrument, randomPreviewNote(instrument), controller.signal);
+    }
+
     return (
         <div
             className={`instrument-list${canScrollUp ? " instrument-list--fade-top" : ""}${canScrollDown ? " instrument-list--fade-bottom" : ""}`}
@@ -95,6 +106,7 @@ export default function InstrumentList({
                                 value={value}
                                 checked={selected === value}
                                 onChange={() => onChange(value)}
+                                onClick={() => preview(value)}
                             />
                             <span>
                                 {value === "pan_flute"

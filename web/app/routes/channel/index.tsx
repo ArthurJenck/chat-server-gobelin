@@ -5,16 +5,36 @@ import { useChannelChat } from "../../features/chat/useChannelChat";
 import KeyControl from "../../features/key/KeyControl";
 import { PATHS } from "../../shared/config";
 import ChannelPages from "./ChannelPages";
-import { DEFAULT_MUSIC_KEY, musicColor } from "../../features/chat/conversationMusic";
+import {
+    DEFAULT_MUSIC_KEY,
+    musicColor,
+} from "../../features/chat/conversationMusic";
 import "./channel.css";
 
 export default function ChannelPage() {
     const { channelId } = useParams();
     const id = Number(channelId);
-    const { account, loading: accountLoading, error: accountError } = useAccount();
     const {
-        channel, hasKey, messages, setVisibleMessages, loading, keyChannelId, keyState, content,
-        setContent, busy, classifying, keyBusy, error, submit, toggleKey,
+        account,
+        loading: accountLoading,
+        error: accountError,
+    } = useAccount();
+    const {
+        channel,
+        hasKey,
+        messages,
+        setVisibleMessages,
+        loading,
+        keyChannelId,
+        keyState,
+        content,
+        setContent,
+        busy,
+        classifying,
+        keyBusy,
+        error,
+        submit,
+        toggleKey,
     } = useChannelChat(id, account);
     const textarea = useRef<HTMLTextAreaElement>(null);
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
@@ -24,7 +44,10 @@ export default function ChannelPage() {
     useEffect(() => {
         const update = () => {
             const height = window.visualViewport?.height ?? window.innerHeight;
-            largestViewportHeight.current = Math.max(largestViewportHeight.current ?? height, height);
+            largestViewportHeight.current = Math.max(
+                largestViewportHeight.current ?? height,
+                height,
+            );
             setViewportHeight(height);
         };
         update();
@@ -54,13 +77,26 @@ export default function ChannelPage() {
     return (
         <main
             className="channel-page"
-            data-keyboard-open={viewportHeight !== null && viewportHeight < (largestViewportHeight.current ?? viewportHeight) - 100}
-            style={{ ...(viewportHeight ? { height: `${viewportHeight}px` } : {}),
-                "--channel-key-color": musicColor(activeMusicKey),
-            } as React.CSSProperties}
+            data-keyboard-open={
+                viewportHeight !== null &&
+                viewportHeight <
+                    (largestViewportHeight.current ?? viewportHeight) - 100
+            }
+            style={
+                {
+                    ...(viewportHeight
+                        ? { height: `${viewportHeight}px` }
+                        : {}),
+                    "--channel-key-color": musicColor(activeMusicKey),
+                } as React.CSSProperties
+            }
         >
             <header className="channel-header">
-                <Link className="channel-back" to={PATHS.home} aria-label="Retour aux channels">
+                <Link
+                    className="channel-back"
+                    to={PATHS.home}
+                    aria-label="Retour aux channels"
+                >
                     <img src="/pictos/arrow.svg" alt="" />
                 </Link>
                 <h1 className="channel-title">{channel?.name ?? "Groupe"}</h1>
@@ -76,8 +112,16 @@ export default function ChannelPage() {
             {(accountLoading || (channel && loading && !error)) && (
                 <p className="channel-status">Chargement des messages…</p>
             )}
-            {(accountError || error) && <p className="channel-status" role="alert">{accountError || error}</p>}
-            {classifying && <p className="channel-status" role="status">Analyse de l’émotion…</p>}
+            {(accountError || error) && (
+                <p className="channel-status" role="alert">
+                    {accountError || error}
+                </p>
+            )}
+            {classifying && (
+                <p className="channel-status" role="status">
+                    Analyse de l’émotion…
+                </p>
+            )}
             <ChannelPages
                 messages={messages}
                 userId={account?.id ?? null}
@@ -85,8 +129,16 @@ export default function ChannelPage() {
                 onVisibleMessagesChange={setVisibleMessages}
             />
             {channel && (
-                <form className="channel-composer" onSubmit={(event) => void submit(event)}>
-                    <label className="channel-screen-reader" htmlFor="message-content">Message</label>
+                <form
+                    className="channel-composer"
+                    onSubmit={(event) => void submit(event)}
+                >
+                    <label
+                        className="channel-screen-reader"
+                        htmlFor="message-content"
+                    >
+                        Message
+                    </label>
                     <textarea
                         ref={textarea}
                         id="message-content"
@@ -100,7 +152,11 @@ export default function ChannelPage() {
                         className="channel-send"
                         type="submit"
                         aria-label="Envoyer"
-                        disabled={!content.trim() || busy || (hasKey && keyChannelId === null)}
+                        disabled={
+                            !content.trim() ||
+                            busy ||
+                            (hasKey && keyChannelId === null)
+                        }
                     />
                 </form>
             )}

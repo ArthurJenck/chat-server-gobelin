@@ -17,7 +17,8 @@ export default function ChannelPages({
     onKeyChange: (key: MusicKey) => void;
     onVisibleMessagesChange: (messages: Message[]) => void;
 }) {
-    const scroller = useRef<HTMLElement>(null);
+    const container = useRef<HTMLElement>(null);
+    const scroller = useRef<HTMLDivElement>(null);
     const sheets = useRef<(HTMLOListElement | null)[]>([]);
     const pageIndex = useRef(0);
     const [size, setSize] = useState({ width: 360, height: 600 });
@@ -47,11 +48,16 @@ export default function ChannelPages({
     }, [pages.length]);
 
     useLayoutEffect(() => {
-        const element = scroller.current;
+        const element = container.current;
         if (!element) return;
         const update = () => {
             const width = Math.max(1, (element.clientWidth || 400) - 40);
             const height = Math.max(1, (element.clientHeight || 650) - 50);
+            const page = element.closest(".channel-page");
+            if (page) {
+                element.style.setProperty("--channel-messages-top", `${element.getBoundingClientRect().top - page.getBoundingClientRect().top}px`);
+                element.style.setProperty("--channel-messages-height", `${element.clientHeight}px`);
+            }
             setSize((current) => current.width === width && current.height === height
                 ? current
                 : { width, height });
@@ -150,43 +156,49 @@ export default function ChannelPages({
 
     return (
         <section
-            ref={scroller}
+            ref={container}
             className="channel-messages"
-            aria-label="Messages"
-            onScroll={(event) => {
-                const current = Math.min(
-                    pages.length - 1,
-                    Math.max(0, Math.round(
-                        pages.length - 1 - event.currentTarget.scrollLeft / (event.currentTarget.clientWidth || 1),
-                    )),
-                );
-                pageIndex.current = current;
-                setActivePage(current);
-            }}
         >
-            <div className="channel-page-track" style={{ width: `${pages.length * 100}%` }}>
-                <div className="channel-page-stage" style={{ width: `${100 / pages.length}%` }}>
-                    {pages.map((page, pageIndex) => (
-                        <ol
-                            key={page.map((block) => block.key).join("|") || "empty"}
-                            ref={(node) => { sheets.current[pageIndex] = node; }}
-                            className="channel-sheet"
-                            style={{ zIndex: pages.length - pageIndex,
-                                "--channel-key-color": musicColor(pageGradientKey(page)),
-                            } as React.CSSProperties}
-                            aria-hidden={pageIndex !== activePage}
-                            inert={pageIndex !== activePage}
-                        >
-                            {page.map((block) => (
-                                <MessageItem
-                                    key={block.key}
-                                    block={block}
-                                    isOwn={block.message.user_id === userId}
-                                />
-                            ))}
-                        </ol>
-                    ))}
-                    {!blocks.length && <p className="channel-empty">Aucun message.</p>}
+            <div
+                ref={scroller}
+                className="channel-messages-scroller"
+                role="region"
+                aria-label="Messages"
+                onScroll={(event) => {
+                    const current = Math.min(
+                        pages.length - 1,
+                        Math.max(0, Math.round(
+                            pages.length - 1 - event.currentTarget.scrollLeft / (event.currentTarget.clientWidth || 1),
+                        )),
+                    );
+                    pageIndex.current = current;
+                    setActivePage(current);
+                }}
+            >
+                <div className="channel-page-track" style={{ width: `${pages.length * 100}%` }}>
+                    <div className="channel-page-stage" style={{ width: `${100 / pages.length}%` }}>
+                        {pages.map((page, pageIndex) => (
+                            <ol
+                                key={page.map((block) => block.key).join("|") || "empty"}
+                                ref={(node) => { sheets.current[pageIndex] = node; }}
+                                className="channel-sheet"
+                                style={{ zIndex: pages.length - pageIndex,
+                                    "--channel-key-color": musicColor(pageGradientKey(page)),
+                                } as React.CSSProperties}
+                                aria-hidden={pageIndex !== activePage}
+                                inert={pageIndex !== activePage}
+                            >
+                                {page.map((block) => (
+                                    <MessageItem
+                                        key={block.key}
+                                        block={block}
+                                        isOwn={block.message.user_id === userId}
+                                    />
+                                ))}
+                            </ol>
+                        ))}
+                        {!blocks.length && <p className="channel-empty">Aucun message.</p>}
+                    </div>
                 </div>
             </div>
         </section>

@@ -24,12 +24,20 @@
 
 .channel-page::before {
     top: 0;
-    background: linear-gradient(to bottom, color-mix(in srgb, var(--channel-key-color) 15%, transparent), transparent);
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--channel-key-color) 15%, transparent),
+        transparent
+    );
 }
 
 .channel-page::after {
     bottom: 0;
-    background: linear-gradient(to top, color-mix(in srgb, var(--channel-key-color) 15%, transparent), transparent);
+    background: linear-gradient(
+        to top,
+        color-mix(in srgb, var(--channel-key-color) 15%, transparent),
+        transparent
+    );
 }
 
 .channel-header {
@@ -116,24 +124,34 @@
 }
 
 .channel-messages {
-    position: relative;
-    z-index: 1;
     min-height: 0;
     flex: 1;
     margin: -25px 0 0;
+}
+
+.channel-messages-scroller {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
+    pointer-events: none;
     scrollbar-width: none;
     touch-action: pan-x;
 }
 
-.channel-messages::-webkit-scrollbar {
+.channel-messages-scroller::-webkit-scrollbar {
     display: none;
 }
 
-.channel-page[data-keyboard-open="true"] .channel-messages {
-    mask-image: linear-gradient(to bottom, transparent, black 40px);
+.channel-page[data-keyboard-open="true"] .channel-messages-scroller {
+    mask-image: linear-gradient(
+        to bottom,
+        black var(--channel-messages-top),
+        transparent var(--channel-messages-top),
+        black calc(var(--channel-messages-top) + 40px)
+    );
 }
 
 .channel-page-track {
@@ -144,8 +162,10 @@
 .channel-page-stage {
     position: sticky;
     left: 0;
-    height: 100%;
+    height: var(--channel-messages-height, 0px);
+    margin-top: var(--channel-messages-top, 0px);
     perspective: 1200px;
+    pointer-events: auto;
     transform-style: preserve-3d;
 }
 

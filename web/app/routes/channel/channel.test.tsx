@@ -96,7 +96,7 @@ describe("Channel page", () => {
         });
         Object.defineProperty(HTMLElement.prototype, "clientWidth", {
             configurable: true,
-            get() { return this.classList.contains("channel-messages") ? 360 : 0; },
+            get() { return this.classList.contains("channel-messages") || this.classList.contains("channel-messages-scroller") ? 360 : 0; },
         });
     });
 
