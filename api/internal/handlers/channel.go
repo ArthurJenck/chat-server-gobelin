@@ -33,7 +33,7 @@ type createChannelRequest struct {
 type editChannelRequest struct {
 	ID int64 `json:"id" binding:"required"`
 	Name string `json:"name" binding:"required"`
-	Metadata *json.RawMessage `json:"metadata"`
+	Metadata *json.RawMessage `json:"metadata" binding:"required"`
 }
 
 type EnterChannelRequest struct {
@@ -152,7 +152,7 @@ func (h channelHandler) EnterChannel(writer http.ResponseWriter, request *http.R
 	writer.Write(result)
 }
 
-func (h channelHandler) EditChannel(writer http.ResponseWriter, request *http.Request) {
+func (h channelHandler) Edit(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 
 	userRaw := ctx.Value("user")
@@ -182,20 +182,18 @@ func (h channelHandler) EditChannel(writer http.ResponseWriter, request *http.Re
 
 	var meta json.RawMessage
 	namespacedMeta := channel.Metadata
-	if req.Metadata != nil {
-		namespace := internal.GetNamespace(ctx)
-		if namespace == "" {
-			log.Printf("Metadatas given without namespace")
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		namespacedMeta[namespace] = *req.Metadata
-		meta, err = json.Marshal(namespacedMeta)
-		if err != nil {
-			log.Printf("Error namespacing metadatas: %s", err.Error())
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	namespace := internal.GetNamespace(ctx)
+	if namespace == "" {
+		log.Printf("Metadatas given without namespace")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	namespacedMeta[namespace] = *req.Metadata
+	meta, err = json.Marshal(namespacedMeta)
+	if err != nil {
+		log.Printf("Error namespacing metadatas: %s", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	channel, err = h.channelRepo.Edit(ctx, *channel, req.Name, meta)
