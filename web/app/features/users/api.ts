@@ -9,8 +9,8 @@ export async function getAccount(): Promise<Account> {
 export async function editUserMetadata(
     metadata: Record<string, unknown>,
 ): Promise<void> {
-    await apiFetch("/user/edit", {
-        method: "POST",
+    await apiFetch("/user", {
+        method: "PUT",
         body: JSON.stringify({ metadata }),
     });
 }

@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,6 +69,38 @@ function mockLogin(current: Account = account) {
 }
 
 describe("Harmonie", () => {
+    it("plays a staff on the newest page after opening a channel with several pages", async () => {
+        mockLogin();
+        setToken("test-token");
+        const messages = Array.from({ length: 12 }, (_, index) => ({
+            id: index + 1,
+            content: `Message ${index + 1}`,
+            user_id: 2,
+            user: "Zoe",
+            creation_date: `2026-11-11T10:${String(index).padStart(2, "0")}:00Z`,
+        }));
+        server.use(http.get(`${api}/channel/message`, ({ request }) => HttpResponse.json(
+            new URL(request.url).searchParams.get("channel") === "9" ? [] : messages,
+        )));
+        renderApp("/channels/5");
+
+        await waitFor(() => expect(document.querySelectorAll(".channel-sheet").length).toBeGreaterThan(1));
+        const newest = document.querySelector(".channel-sheet[aria-hidden='false']");
+        expect(newest).toBe(document.querySelector(".channel-sheet"));
+        const staff = newest!.querySelector<HTMLButtonElement>(".channel-staff");
+        expect(staff).toBeEnabled();
+        await userEvent.click(staff!);
+        await waitFor(() => expect(playback.play).toHaveBeenCalledOnce());
+        vi.spyOn(staff!, "getBoundingClientRect").mockReturnValue(
+            DOMRect.fromRect({ x: 10, y: 10, width: 100, height: 40 }),
+        );
+        const item = staff!.closest(".channel-message")!;
+        fireEvent.click(item, { clientX: 50, clientY: 30 });
+        expect(playback.play).toHaveBeenCalledTimes(2);
+        fireEvent.click(item, { clientX: 50, clientY: 60 });
+        expect(playback.play).toHaveBeenCalledTimes(2);
+    });
+
     it("plays a negative message in minor on the page tonic", async () => {
         mockLogin();
         setToken("test-token");
@@ -117,6 +149,31 @@ describe("Harmonie", () => {
         expect(firstSignal.aborted).toBe(true);
         expect(stop).toHaveBeenCalledOnce();
         expect(playback.play).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps a staff clickable while its instrument is loading", async () => {
+        mockLogin();
+        setToken("test-token");
+        server.use(http.get("http://localhost:4000/channel/message", ({ request }) => HttpResponse.json(
+            new URL(request.url).searchParams.get("channel") === "9" ? [] : [{
+                id: 1,
+                content: "Bonjour",
+                user_id: 2,
+                user: "Zoe",
+                creation_date: new Date().toISOString(),
+            }],
+        )));
+        let finish = (_stop: () => void) => {};
+        playback.play.mockReturnValue(new Promise<() => void>((resolve) => { finish = resolve; }));
+        renderApp("/channels/5");
+
+        await userEvent.click(await screen.findByRole("button", { name: "Lire le message" }));
+        const loading = screen.getByRole("button", { name: "Chargement du son, réessayer" });
+        expect(loading).toBeEnabled();
+        await userEvent.click(loading);
+        expect(playback.play).toHaveBeenCalledTimes(2);
+        finish(vi.fn());
+        await screen.findByRole("button", { name: "Rejouer le message" });
     });
 
     it("sends the detected emotion without changing the conversation key", async () => {

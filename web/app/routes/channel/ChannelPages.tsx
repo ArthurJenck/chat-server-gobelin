@@ -14,6 +14,7 @@ export default function ChannelPages({
     userId,
     audio,
     preloadEnabled,
+    sentMessageCount,
     onKeyChange,
     onVisibleMessagesChange,
 }: {
@@ -21,12 +22,15 @@ export default function ChannelPages({
     userId: number | null;
     audio: ChannelAudioEngine;
     preloadEnabled: boolean;
+    sentMessageCount: number;
     onKeyChange: (key: MusicKey) => void;
     onVisibleMessagesChange: (messages: Message[]) => void;
 }) {
     const container = useRef<HTMLElement>(null);
     const scroller = useRef<HTMLDivElement>(null);
+    const stage = useRef<HTMLDivElement>(null);
     const sheets = useRef<(HTMLOListElement | null)[]>([]);
+    const pressedStaff = useRef<HTMLButtonElement | null>(null);
     const pageIndex = useRef(0);
     const pageNavigation = useRef<gsap.core.Tween | null>(null);
     const [size, setSize] = useState({ width: 360, height: 600 });
@@ -36,19 +40,63 @@ export default function ChannelPages({
         paginateChannelStaffs(blocks, size.height), size.width,
     ), [blocks, size.height, size.width]);
     const firstVisiblePage = Math.max(0, Math.min(activePage - 2, pages.length - 5));
+    const visiblePageCount = Math.min(5, pages.length);
+    const visiblePages = Array.from(
+        { length: visiblePageCount },
+        (_, index) => firstVisiblePage + visiblePageCount - 1 - index,
+    );
+
+    const staffAtPoint = (x: number, y: number) => {
+        for (const staff of sheets.current[pageIndex.current]?.querySelectorAll<HTMLButtonElement>(".channel-staff") ?? []) {
+            if (staff.disabled) continue;
+            const rect = staff.getBoundingClientRect();
+            if (x >= rect.left && x <= rect.right &&
+                y >= rect.top && y <= rect.bottom) return staff;
+        }
+        return null;
+    };
+
+    const clearPressedStaff = () => {
+        pressedStaff.current?.removeAttribute("data-pressed");
+        pressedStaff.current = null;
+    };
+
+    const updateHoveredStaff = (stage: HTMLDivElement, x: number, y: number) => {
+        stage.style.cursor = staffAtPoint(x, y) ? "pointer" : "";
+    };
 
     const syncActivePage = (scrollLeft: number, width: number) => {
+        const progress = width > 0
+            ? Math.max(0, Math.min(pages.length - 1,
+                pages.length - 1 - scrollLeft / width))
+            : Math.min(pageIndex.current, pages.length - 1);
         const current = Math.min(
             pages.length - 1,
-            Math.max(0, Math.round(pages.length - 1 - scrollLeft / (width || 1))),
+            Math.max(0, Math.round(progress)),
         );
+        sheets.current.slice(0, pages.length).forEach((sheet, index) => {
+            if (!sheet) return;
+            const turn = Math.max(0, Math.min(1, progress - index));
+            const depth = Math.max(0, Math.min(1, (progress - index) * 2));
+            const front = index === 0 ? 13 : -index;
+            const back = index === 0 ? -13 : index;
+            gsap.set(sheet, {
+                rotateY: (180 - index / 2) * turn,
+                z: front + (back - front) * depth,
+            });
+            const hidden = index !== current;
+            sheet.inert = hidden;
+            sheet.setAttribute("aria-hidden", String(hidden));
+        });
         if (pageIndex.current !== current) {
+            clearPressedStaff();
+            if (stage.current) stage.current.style.cursor = "";
             pageIndex.current = current;
             setActivePage(current);
         }
     };
 
-    const goToPage = (target: number) => {
+    const goToPage = (target: number, maxDuration = Infinity) => {
         const element = scroller.current;
         if (!element) return;
         pageNavigation.current?.kill();
@@ -61,12 +109,16 @@ export default function ChannelPages({
         }
         pageNavigation.current = gsap.to(element, {
             scrollLeft,
-            duration: Math.max(0.2, Math.abs(scrollLeft - element.scrollLeft) / Math.max(1, element.clientWidth) * 0.4),
+            duration: Math.min(maxDuration, Math.max(0.2, Math.abs(scrollLeft - element.scrollLeft) / Math.max(1, element.clientWidth) * 0.4)),
             ease: "none",
             onUpdate: () => syncActivePage(element.scrollLeft, element.clientWidth),
             onComplete: () => { pageNavigation.current = null; },
         });
     };
+
+    useEffect(() => {
+        if (sentMessageCount > 0) goToPage(0, 1.5);
+    }, [sentMessageCount]);
 
     useEffect(() => () => { pageNavigation.current?.kill(); }, []);
 
@@ -105,11 +157,6 @@ export default function ChannelPages({
         const update = () => {
             const width = Math.max(1, (element.clientWidth || 400) - 40);
             const height = Math.max(1, (element.clientHeight || 650) - 50);
-            const page = element.closest(".channel-page");
-            if (page) {
-                element.style.setProperty("--channel-messages-top", `${element.getBoundingClientRect().top - page.getBoundingClientRect().top}px`);
-                element.style.setProperty("--channel-messages-height", `${element.clientHeight}px`);
-            }
             setSize((current) => current.width === width && current.height === height
                 ? current
                 : { width, height });
@@ -133,42 +180,13 @@ export default function ChannelPages({
         element.scrollLeft = (pages.length - 1 - current) * element.clientWidth;
         pageIndex.current = current;
         setActivePage(current);
+        syncActivePage(element.scrollLeft, element.clientWidth);
     }, [pages.length, size.width]);
 
     useLayoutEffect(() => {
         const element = scroller.current;
         if (!element || typeof window.matchMedia !== "function") return;
         gsap.registerPlugin(ScrollTrigger);
-        const animations: gsap.core.Tween[] = [];
-        sheets.current.slice(0, pages.length).forEach((sheet, index) => {
-            if (!sheet) return;
-            gsap.set(sheet, { rotateY: 0, z: index === 0 ? 13 : -index });
-            if (index === pages.length - 1) return;
-            animations.push(gsap.fromTo(sheet, {
-                rotateY: 180 - index / 2,
-            }, {
-                rotateY: 0,
-                scrollTrigger: {
-                    scroller: element,
-                    horizontal: true,
-                    scrub: true,
-                    start: () => (pages.length - 2 - index) * element.clientWidth,
-                    end: () => (pages.length - 1 - index) * element.clientWidth,
-                },
-            }));
-            animations.push(gsap.fromTo(sheet, {
-                z: index === 0 ? -13 : index,
-            }, {
-                z: index === 0 ? 13 : -index,
-                scrollTrigger: {
-                    scroller: element,
-                    horizontal: true,
-                    scrub: true,
-                    start: () => (pages.length - 1.5 - index) * element.clientWidth,
-                    end: () => (pages.length - 1 - index) * element.clientWidth,
-                },
-            }));
-        });
         const snap = pages.length > 1 ? ScrollTrigger.create({
             scroller: element,
             horizontal: true,
@@ -178,7 +196,7 @@ export default function ChannelPages({
                 snapTo: 1 / (pages.length - 1),
                 directional: false,
                 inertia: false,
-                delay: 0,
+                delay: 0.25,
                 duration: { min: 0.15, max: 0.3 },
                 ease: "power2.out",
             },
@@ -186,12 +204,8 @@ export default function ChannelPages({
         ScrollTrigger.refresh();
         return () => {
             snap?.kill();
-            animations.forEach((animation) => {
-                animation.scrollTrigger?.kill();
-                animation.kill();
-            });
         };
-    }, [pages]);
+    }, [pages.length, size.width]);
 
     useEffect(() => {
         const element = scroller.current;
@@ -234,10 +248,35 @@ export default function ChannelPages({
                     }}
                 >
                     <div className="channel-page-track" style={{ width: `${pages.length * 100}%` }}>
-                        <div className="channel-page-stage" style={{ width: `${100 / pages.length}%` }}>
+                        <div
+                            className="channel-page-stage"
+                            ref={stage}
+                            style={{ width: `${100 / pages.length}%` }}
+                            onPointerMove={(event) => {
+                                if (event.pointerType !== "touch")
+                                    updateHoveredStaff(event.currentTarget, event.clientX, event.clientY);
+                            }}
+                            onPointerDown={(event) => {
+                                clearPressedStaff();
+                                const staff = staffAtPoint(event.clientX, event.clientY);
+                                if (!staff) return;
+                                staff.setAttribute("data-pressed", "");
+                                pressedStaff.current = staff;
+                            }}
+                            onPointerUp={clearPressedStaff}
+                            onPointerCancel={clearPressedStaff}
+                            onPointerLeave={(event) => {
+                                clearPressedStaff();
+                                event.currentTarget.style.cursor = "";
+                            }}
+                            onClick={(event) => {
+                                if ((event.target as Element).closest(".channel-staff")) return;
+                                staffAtPoint(event.clientX, event.clientY)?.click();
+                            }}
+                        >
                             {pages.map((page, pageIndex) => (
                                 <ol
-                                    key={page.map((block) => block.key).join("|") || "empty"}
+                                    key={pageIndex}
                                     ref={(node) => { sheets.current[pageIndex] = node; }}
                                     className="channel-sheet"
                                     style={{ zIndex: pages.length - pageIndex,
@@ -263,19 +302,16 @@ export default function ChannelPages({
             </section>
             {pages.length > 1 && (
                 <nav className="channel-pagination" aria-label="Pages des messages">
-                    {pages.slice(firstVisiblePage, firstVisiblePage + 5).map((_, index) => {
-                        const targetPage = firstVisiblePage + index;
-                        return (
-                            <button
-                                key={targetPage}
-                                type="button"
-                                className="channel-page-dot"
-                                aria-label={`Aller à la page ${targetPage + 1} sur ${pages.length}`}
-                                aria-current={targetPage === activePage ? "page" : undefined}
-                                onClick={() => goToPage(targetPage)}
-                            />
-                        );
-                    })}
+                    {visiblePages.map((targetPage) => (
+                        <button
+                            key={targetPage}
+                            type="button"
+                            className="channel-page-dot"
+                            aria-label={`Aller à la page ${targetPage + 1} sur ${pages.length}`}
+                            aria-current={targetPage === activePage ? "page" : undefined}
+                            onClick={() => goToPage(targetPage)}
+                        />
+                    ))}
                 </nav>
             )}
         </>

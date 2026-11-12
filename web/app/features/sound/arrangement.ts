@@ -74,10 +74,11 @@ export function createArrangement(
     for (const index of noteIndexes) {
         const event = plan.events[index];
         const duration = noteDuration(plan, index, lastIndex, settings);
-        const ornamentDelay =
-            event.endingMidi === undefined
-                ? 0
-                : Math.min(0.15, duration * 0.35);
+        // const ornamentDelay =
+        //     event.endingMidi === undefined
+        //         ? 0
+        //         : Math.min(0.15, duration * 0.35);
+        const ornamentDelay = 0;
         add(
             event.midi!,
             event.start,
@@ -136,17 +137,37 @@ export function createArrangement(
             if (settings.chordRhythm === "retrigger") {
                 for (const index of indexes.slice(0, -1)) {
                     const event = plan.events[index];
-                    addChord(plan.tonicMidi, event.start,
-                        noteDuration(plan, index, segmentLast, settings));
+                    addChord(
+                        plan.tonicMidi,
+                        event.start,
+                        noteDuration(plan, index, segmentLast, settings),
+                    );
                 }
             } else if (segmentFirst !== segmentLast) {
-                const duration = settings.chordRhythm === "sustain"
-                    ? Math.max(noteDuration(plan, segmentFirst, segmentLast, settings), last.start - first.start)
-                    : noteDuration(plan, segmentFirst, segmentLast, settings);
+                const duration =
+                    settings.chordRhythm === "sustain"
+                        ? Math.max(
+                              noteDuration(
+                                  plan,
+                                  segmentFirst,
+                                  segmentLast,
+                                  settings,
+                              ),
+                              last.start - first.start,
+                          )
+                        : noteDuration(
+                              plan,
+                              segmentFirst,
+                              segmentLast,
+                              settings,
+                          );
                 addChord(plan.tonicMidi, first.start, duration);
             }
-            addChord(plan.tonicMidi, last.start,
-                noteDuration(plan, segmentLast, segmentLast, settings));
+            addChord(
+                plan.tonicMidi,
+                last.start,
+                noteDuration(plan, segmentLast, segmentLast, settings),
+            );
         }
     }
 

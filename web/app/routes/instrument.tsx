@@ -50,6 +50,19 @@ export default function InstrumentPage() {
 
     return (
         <main className="instrument-page">
+            {(registration || initial) && (
+                <button
+                    className="instrument-back"
+                    type="button"
+                    aria-label="Retour"
+                    onClick={() => {
+                        if (initial) setSelectedInstrument(null);
+                        void navigate(initial ? PATHS.profile : "/register");
+                    }}
+                >
+                    <img src="/pictos/arrow.svg" alt="" />
+                </button>
+            )}
             <h1 id="instrument-title">
                 <span>Choisis ton</span>{" "}
                 <span>instrument</span>

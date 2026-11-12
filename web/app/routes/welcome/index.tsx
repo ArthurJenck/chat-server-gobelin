@@ -2,6 +2,7 @@ import { useNavigate } from "react-router";
 import DottedButton from "../../components/DottedButton";
 import { PATHS } from "../../shared/config";
 import "./welcome.css";
+import EmphasizedText from "~/components/EmphasizedText";
 
 export default function Welcome() {
     const navigate = useNavigate();
@@ -19,7 +20,7 @@ export default function Welcome() {
                 iconSrc="/pictos/arrow.svg"
                 onClick={() => void navigate(PATHS.login)}
             >
-                C'est parti !
+                <EmphasizedText>C'est parti !</EmphasizedText>
             </DottedButton>
         </main>
     );

@@ -404,7 +404,7 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
     gate: 0.7,
     filterFrequency: 12000,
     resonance: 0.7,
-    volume: 0.25,
+    volume: 1,
     echoEnabled: false,
     echoDelay: 0.25,
     echoFeedback: 0.25,

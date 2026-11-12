@@ -277,6 +277,9 @@ describe("Channel page", () => {
         expect(scroller.scrollLeft).toBe((initialCount - 1) * 360 - 720);
         fireEvent.scroll(scroller);
         expect(document.querySelectorAll(".channel-sheet[aria-hidden='false']")).toHaveLength(1);
+        const active = document.querySelector<HTMLOListElement>(".channel-sheet[aria-hidden='false']");
+        expect(active?.inert).toBe(false);
+        expect(document.querySelector(".channel-sheet")?.getAttribute("style")).toContain("rotateY");
         messageAreaHeight = 180;
         const originalWindowHeight = window.innerHeight;
         Object.defineProperty(window, "innerHeight", { configurable: true, value: 500 });
@@ -286,7 +289,7 @@ describe("Channel page", () => {
         Object.defineProperty(window, "innerHeight", { configurable: true, value: originalWindowHeight });
     });
 
-    it("navigates with five visible page dots and follows manual scrolling", async () => {
+    it("places newer page dots on the right and follows manual scrolling", async () => {
         messageAreaHeight = 120;
         mockChannel(Array.from({ length: 8 }, (_, index) => message(index + 1, `Message ${index + 1}`)));
         renderApp("/channels/5");
@@ -297,6 +300,8 @@ describe("Channel page", () => {
         expect(pagination.previousElementSibling).toHaveClass("channel-messages");
         expect(pagination.nextElementSibling).toHaveClass("channel-composer");
         expect(within(pagination).getAllByRole("button")).toHaveLength(5);
+        expect(within(pagination).getAllByRole("button").map((button) => button.getAttribute("aria-label")))
+            .toEqual([5, 4, 3, 2, 1].map((page) => `Aller à la page ${page} sur 8`));
         expect(screen.getByRole("button", { name: "Aller à la page 1 sur 8" }))
             .toHaveAttribute("aria-current", "page");
 
@@ -307,11 +312,88 @@ describe("Channel page", () => {
         expect(screen.getByRole("button", { name: "Aller à la page 3 sur 8" })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Aller à la page 7 sur 8" })).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Aller à la page 1 sur 8" })).not.toBeInTheDocument();
+        expect(within(pagination).getAllByRole("button").map((button) => button.getAttribute("aria-label")))
+            .toEqual([7, 6, 5, 4, 3].map((page) => `Aller à la page ${page} sur 8`));
 
         scroller.scrollLeft = 360;
         fireEvent.scroll(scroller);
         expect(screen.getByRole("button", { name: "Aller à la page 7 sur 8" }))
             .toHaveAttribute("aria-current", "page");
         expect(screen.getByRole("button", { name: "Aller à la page 8 sur 8" })).toBeInTheDocument();
+    });
+
+    it("forwards a click through a turned sheet to its visible staff", async () => {
+        messageAreaHeight = 120;
+        mockChannel([message(1, "Ancien"), message(2, "Deuxième"), message(3, "Troisième")]);
+        renderApp("/channels/5");
+        await waitFor(() => expect(document.querySelectorAll(".channel-sheet")).toHaveLength(3));
+
+        const scroller = screen.getByRole("region", { name: "Messages" });
+        scroller.scrollLeft = 0;
+        fireEvent.scroll(scroller);
+        const active = document.querySelector(".channel-sheet[aria-hidden='false']")!;
+        const staff = active.querySelector<HTMLButtonElement>(".channel-staff")!;
+        vi.spyOn(staff, "getBoundingClientRect").mockReturnValue(
+            DOMRect.fromRect({ x: 10, y: 10, width: 100, height: 40 }),
+        );
+        const click = vi.spyOn(staff, "click").mockImplementation(() => {});
+        const stage = document.querySelector<HTMLDivElement>(".channel-page-stage")!;
+
+        fireEvent.pointerMove(stage, { clientX: 50, clientY: 30, pointerType: "mouse" });
+        expect(stage).toHaveStyle({ cursor: "pointer" });
+        fireEvent.pointerDown(stage, { clientX: 50, clientY: 30 });
+        expect(staff).toHaveAttribute("data-pressed");
+        fireEvent.pointerUp(stage);
+        expect(staff).not.toHaveAttribute("data-pressed");
+
+        fireEvent.click(stage, {
+            clientX: 50,
+            clientY: 30,
+        });
+        expect(click).toHaveBeenCalledOnce();
+        fireEvent.pointerMove(stage, { clientX: 50, clientY: 60, pointerType: "mouse" });
+        expect(stage).not.toHaveStyle({ cursor: "pointer" });
+    });
+
+    it("turns from an older page to the sent message after sending", async () => {
+        messageAreaHeight = 120;
+        emotionClassifier.classify.mockResolvedValue("neutral");
+        const messages = Array.from({ length: 4 }, (_, index) => ({
+            ...message(index + 1, `Message ${index + 1}`),
+            creation_date: new Date(Date.now() - (4 - index) * 60_000).toISOString(),
+            metadata: { harmonie: { emotion: "neutral" } },
+        }));
+        mockChannel(messages);
+        server.use(http.post(`${api}/channel/message`, async ({ request }) => {
+            const sent = await request.json() as { content: string };
+            messages.push({
+                ...message(5, sent.content, 1),
+                creation_date: new Date().toISOString(),
+                metadata: { harmonie: { emotion: "neutral" } },
+            });
+            return HttpResponse.json(messages.at(-1));
+        }));
+        renderApp("/channels/5");
+
+        await waitFor(() => expect(document.querySelectorAll(".channel-sheet")).toHaveLength(4));
+        const scroller = screen.getByRole("region", { name: "Messages" });
+        scroller.scrollLeft = 0;
+        fireEvent.scroll(scroller);
+        expect(screen.getByRole("button", { name: "Aller à la page 4 sur 4" }))
+            .toHaveAttribute("aria-current", "page");
+
+        await userEvent.type(screen.getByLabelText("Message"), "Mon nouveau message");
+        await userEvent.click(screen.getByRole("button", { name: "Envoyer" }));
+
+        await waitFor(() => expect(document.querySelectorAll(".channel-sheet")).toHaveLength(5));
+        await waitFor(() => expect(scroller.scrollLeft).toBeGreaterThan(0));
+        expect(scroller.scrollLeft).toBeLessThan(4 * 360);
+        await waitFor(() => expect(scroller.scrollLeft).toBe(4 * 360), { timeout: 3000 });
+        expect(screen.getByRole("button", { name: "Aller à la page 1 sur 5" }))
+            .toHaveAttribute("aria-current", "page");
+        expect(Array.from(
+            document.querySelectorAll(".channel-sheet[aria-hidden='false'] .emphasized-text-face"),
+            (node) => node.textContent,
+        ).join("")).toBe("Monnouveaumessage");
     });
 });

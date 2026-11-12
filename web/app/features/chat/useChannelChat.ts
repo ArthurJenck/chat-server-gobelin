@@ -41,6 +41,7 @@ export function useChannelChat(id: number, account: Account | null) {
     const [loading, setLoading] = useState(true);
     const [content, setContent] = useState("");
     const [busy, setBusy] = useState(false);
+    const [sentMessageCount, setSentMessageCount] = useState(0);
     const [classifying, setClassifying] = useState(false);
     const [keyBusy, setKeyBusy] = useState(false);
     const [error, setError] = useState("");
@@ -171,6 +172,7 @@ export function useChannelChat(id: number, account: Account | null) {
             });
             setContent("");
             await refresh(keyChannelId);
+            setSentMessageCount((count) => count + 1);
         } catch (cause) {
             handleError(cause, "Envoi impossible.");
         } finally {
@@ -203,6 +205,7 @@ export function useChannelChat(id: number, account: Account | null) {
         content,
         setContent,
         busy,
+        sentMessageCount,
         classifying,
         keyBusy,
         error,

@@ -123,6 +123,7 @@
 }
 
 .channel-messages {
+    position: relative;
     min-height: 0;
     flex: 1;
     margin: -25px 0 0;
@@ -135,22 +136,12 @@
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
-    pointer-events: none;
     scrollbar-width: none;
     touch-action: pan-x;
 }
 
 .channel-messages-scroller::-webkit-scrollbar {
     display: none;
-}
-
-.channel-page[data-keyboard-open="true"] .channel-messages-scroller {
-    mask-image: linear-gradient(
-        to bottom,
-        black var(--channel-messages-top),
-        transparent var(--channel-messages-top),
-        black calc(var(--channel-messages-top) + 40px)
-    );
 }
 
 .channel-page-track {
@@ -161,10 +152,8 @@
 .channel-page-stage {
     position: sticky;
     left: 0;
-    height: var(--channel-messages-height, 0px);
-    margin-top: var(--channel-messages-top, 0px);
+    height: 100%;
     perspective: 1200px;
-    pointer-events: none;
     transform-style: preserve-3d;
 }
 
@@ -225,6 +214,17 @@
     color: var(--color-ink);
     cursor: pointer;
     text-align: left;
+    transform-origin: center;
+    transition: transform 120ms ease;
+}
+
+.channel-staff:active,
+.channel-staff[data-pressed] {
+    transform: scale(0.98);
+}
+
+.channel-staff * {
+    pointer-events: none;
 }
 
 .channel-staff:disabled {

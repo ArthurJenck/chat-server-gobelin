@@ -9,8 +9,9 @@ export function createChannelAudioEngine(settings: SoundSettings) {
     let context: AudioContext | null = null;
     let filter: BiquadFilterNode | null = null;
     let disposed = false;
-    let backgroundStarted = false;
+    let preloadQueue = Promise.resolve();
     const soundfonts = new Map<Instrument, Promise<ChannelSoundfont>>();
+    const queued = new Set<Instrument>();
     const active = new Set<() => void>();
 
     function audioContext() {
@@ -65,20 +66,19 @@ export function createChannelAudioEngine(settings: SoundSettings) {
 
     function preload(visible: Instrument[]) {
         if (disposed || typeof window === "undefined" || !window.AudioContext) return;
-        for (const instrument of visible) void load(instrument).catch(() => {});
-        if (backgroundStarted) return;
-        backgroundStarted = true;
-        void (async () => {
-            await Promise.allSettled(visible.map((instrument) => load(instrument)));
-            for (const instrument of Object.keys(INSTRUMENTS) as Instrument[]) {
-                if (disposed) return;
+        for (const instrument of visible) {
+            if (queued.has(instrument) || soundfonts.has(instrument)) continue;
+            queued.add(instrument);
+            preloadQueue = preloadQueue.then(async () => {
+                queued.delete(instrument);
+                if (disposed || soundfonts.has(instrument)) return;
                 try {
                     await load(instrument);
                 } catch {
-                    continue;
+                    return;
                 }
-            }
-        })();
+            });
+        }
     }
 
     async function play(

@@ -11,6 +11,7 @@
     filter: blur(4px);
     pointer-events: none;
     z-index: 0;
+    opacity: 0.4;
 }
 
 .emphasized-text-face {

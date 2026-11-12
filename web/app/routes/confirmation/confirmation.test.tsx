@@ -9,6 +9,21 @@ import { server } from "../../../test/setup";
 const api = "http://localhost:4000";
 
 describe("Confirmation page", () => {
+    it("returns from instrument selection to registration with the entered details", async () => {
+        const { router } = renderApp("/register");
+        await userEvent.type(screen.getByLabelText("Nom d’utilisateur :"), "Laia Crossing");
+        await userEvent.type(screen.getByLabelText("Mot de passe :"), "secret");
+        await userEvent.type(screen.getByLabelText("Confirmer le mot de passe :"), "secret");
+        await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
+
+        expect(await screen.findByRole("button", { name: "Retour" })).toBeInTheDocument();
+        await userEvent.click(screen.getByRole("button", { name: "Retour" }));
+
+        await waitFor(() => expect(router.state.location.pathname).toBe("/register"));
+        expect(screen.getByLabelText("Nom d’utilisateur :")).toHaveValue("Laia Crossing");
+        expect(screen.getByLabelText("Mot de passe :")).toHaveValue("secret");
+    });
+
     it("shows the selected details and returns to the previous page", async () => {
         renderApp("/register");
         await userEvent.type(screen.getByLabelText("Nom d’utilisateur :"), "Laia Crossing");
@@ -81,6 +96,34 @@ describe("Confirmation page", () => {
 
         expect(await screen.findByRole("button", { name: "Modifier l’instrument : Harpe" })).toBeInTheDocument();
         expect(saved).toEqual({ metadata: { instrument: "harp" } });
+    });
+
+    it("returns to the profile without saving an instrument change", async () => {
+        setToken("valid-token");
+        let saved: unknown;
+        server.use(
+            http.get(`${api}/me`, () => HttpResponse.json({
+                id: 1,
+                username: "Alice",
+                channels: [],
+                metadata: { harmonie: { instrument: "guitar" } },
+            })),
+            http.put(`${api}/user`, async ({ request }) => {
+                saved = await request.json();
+                return HttpResponse.json({});
+            }),
+        );
+
+        const { router } = renderApp("/profil");
+        await userEvent.click(await screen.findByRole("button", { name: "Modifier l’instrument : Guitare" }));
+        await userEvent.click(await screen.findByRole("radio", { name: "Harpe" }));
+        await userEvent.click(screen.getByRole("button", { name: "Retour" }));
+
+        await waitFor(() => expect(router.state.location.pathname).toBe("/profil"));
+        expect(screen.getByRole("button", { name: "Modifier l’instrument : Guitare" })).toBeInTheDocument();
+        expect(saved).toBeUndefined();
+        await userEvent.click(screen.getByRole("button", { name: "Modifier l’instrument : Guitare" }));
+        expect(await screen.findByRole("radio", { name: "Guitare" })).toBeChecked();
     });
 
     it("waits for an existing account before showing its instrument confirmation", async () => {

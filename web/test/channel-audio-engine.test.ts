@@ -58,7 +58,7 @@ afterEach(() => {
     vi.clearAllMocks();
 });
 
-it("loads visible instruments before the rest of the catalogue", async () => {
+it("preloads only visible instruments and lets a click load another instrument immediately", async () => {
     let release: () => void = () => {};
     const firstReady = new Promise<void>((resolve) => { release = resolve; });
     sampler.create.mockImplementationOnce(() => ({
@@ -69,11 +69,14 @@ it("loads visible instruments before the rest of the catalogue", async () => {
     const audio = createChannelAudioEngine(DEFAULT_SOUND_SETTINGS);
 
     audio.preload(["guitar"]);
-    expect(sampler.create).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(sampler.create).toHaveBeenCalledTimes(1));
     expect(sampler.create.mock.calls[0][1].instrument).toBe("acoustic_guitar_nylon");
+    const piano = audio.play(plan, DEFAULT_SOUND_SETTINGS, vi.fn(), new AbortController().signal);
+    await piano;
+    expect(sampler.create.mock.calls[1][1].instrument).toBe("acoustic_grand_piano");
     release();
-    await vi.waitFor(() => expect(sampler.create.mock.calls[1][1].instrument)
-        .toBe("acoustic_grand_piano"));
+    await Promise.resolve();
+    expect(sampler.create).toHaveBeenCalledTimes(2);
     audio.dispose();
 });
 
