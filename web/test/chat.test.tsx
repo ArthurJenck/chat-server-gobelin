@@ -9,12 +9,13 @@ import { renderApp } from "./render-app";
 import { server } from "./setup";
 
 const playback = vi.hoisted(() => ({ play: vi.fn(), preload: vi.fn(), dispose: vi.fn() }));
-const emotionClassifier = vi.hoisted(() => ({ classify: vi.fn() }));
+const emotionClassifier = vi.hoisted(() => ({ classify: vi.fn(), preload: vi.fn() }));
 vi.mock("../app/features/sound/channelAudioEngine", () => ({
     createChannelAudioEngine: () => playback,
 }));
 vi.mock("../app/features/chat/emotionClient", () => ({
     classifyEmotion: emotionClassifier.classify,
+    preloadEmotionModel: emotionClassifier.preload,
 }));
 
 const api = "http://localhost:4000";
@@ -42,6 +43,8 @@ beforeEach(() => {
     playback.dispose.mockReset();
     emotionClassifier.classify.mockReset();
     emotionClassifier.classify.mockRejectedValue(new Error("Modèle indisponible"));
+    emotionClassifier.preload.mockReset();
+    emotionClassifier.preload.mockResolvedValue(undefined);
 });
 
 async function signIn() {
@@ -145,6 +148,88 @@ describe("Harmonie", () => {
         expect(emotionClassifier.classify).toHaveBeenCalledWith("Je suis triste");
     });
 
+    it("sends on Enter and inserts a line break on Shift+Enter", async () => {
+        mockLogin();
+        setToken("test-token");
+        emotionClassifier.classify.mockResolvedValue("neutral");
+        const sent: string[] = [];
+        server.use(
+            http.get(`${api}/channel/message`, () => HttpResponse.json([])),
+            http.post(`${api}/channel/message`, async ({ request }) => {
+                const body = await request.json() as { content: string };
+                sent.push(body.content);
+                return HttpResponse.json({ id: 1 });
+            }),
+        );
+        renderApp("/channels/5");
+        await screen.findByRole("heading", { name: "general" });
+        const input = screen.getByLabelText("Message");
+        await userEvent.type(input, "Bonjour{Shift>}{Enter}{/Shift}Alice");
+        expect(input).toHaveValue("Bonjour\nAlice");
+        expect(sent).toEqual([]);
+        await userEvent.type(input, "{Meta>}{Enter}{/Meta}");
+        expect(input).toHaveValue("Bonjour\nAlice");
+        expect(sent).toEqual([]);
+        await userEvent.type(input, "{Enter}");
+        await waitFor(() => expect(sent).toEqual(["Bonjour\nAlice"]));
+        await waitFor(() => expect(input).toHaveValue(""));
+    });
+
+    it("waits for emotion analysis before sending the message", async () => {
+        mockLogin();
+        setToken("test-token");
+        let release = () => {};
+        const pending = new Promise<"sadness">((resolve) => {
+            release = () => resolve("sadness");
+        });
+        emotionClassifier.classify.mockReturnValue(pending);
+        let sent: unknown;
+        server.use(
+            http.get(`${api}/channel/message`, () => HttpResponse.json([])),
+            http.post(`${api}/channel/message`, async ({ request }) => {
+                sent = await request.json();
+                return HttpResponse.json({ id: 42, content: "Je suis triste", creation_date: new Date().toISOString() });
+            }),
+        );
+        renderApp("/channels/5");
+        await screen.findByRole("heading", { name: "general" });
+        expect(emotionClassifier.preload).toHaveBeenCalledOnce();
+        await userEvent.type(screen.getByLabelText("Message"), "Je suis triste");
+        await userEvent.click(screen.getByRole("button", { name: "Envoyer" }));
+        expect(await screen.findByText("Analyse de l’émotion…")).toBeInTheDocument();
+        expect(sent).toBeUndefined();
+        expect(screen.getByLabelText("Message")).toHaveValue("Je suis triste");
+        release();
+        await waitFor(() => expect(sent).toEqual({
+            channel: 5,
+            content: "Je suis triste",
+            metadata: {
+                instrument: "guitar",
+                music_root: 0,
+                music_mode: "major",
+                emotion: "sadness",
+            },
+        }));
+        await waitFor(() => expect(screen.getByLabelText("Message")).toHaveValue(""));
+    });
+
+    it("keeps the draft when emotion analysis fails", async () => {
+        mockLogin();
+        setToken("test-token");
+        const post = vi.fn(() => HttpResponse.json({ id: 1 }));
+        server.use(
+            http.get(`${api}/channel/message`, () => HttpResponse.json([])),
+            http.post(`${api}/channel/message`, post),
+        );
+        renderApp("/channels/5");
+        await screen.findByRole("heading", { name: "general" });
+        await userEvent.type(screen.getByLabelText("Message"), "Je suis triste");
+        await userEvent.click(screen.getByRole("button", { name: "Envoyer" }));
+        expect(await screen.findByText("Modèle indisponible")).toBeInTheDocument();
+        expect(post).not.toHaveBeenCalled();
+        expect(screen.getByLabelText("Message")).toHaveValue("Je suis triste");
+    });
+
     it("requires a session", async () => {
         renderApp("/");
         expect(
@@ -152,12 +237,14 @@ describe("Harmonie", () => {
                 name: "Bienvenue à Harmonie",
             }),
         ).toBeInTheDocument();
+        expect(emotionClassifier.preload).not.toHaveBeenCalled();
         await userEvent.click(
             screen.getByRole("button", { name: "C'est parti !" }),
         );
         expect(
             await screen.findByRole("heading", { name: "Se connecter" }),
         ).toBeInTheDocument();
+        expect(emotionClassifier.preload).toHaveBeenCalledOnce();
     });
 
     it("returns to welcome when the session has expired", async () => {
@@ -309,6 +396,7 @@ describe("Harmonie", () => {
     });
 
     it("does not load the key in another group and still sends messages", async () => {
+        emotionClassifier.classify.mockResolvedValue("neutral");
         const studio = { id: 7, name: "studio", creation_date: general.creation_date };
         mockLogin({ ...account, channels: [general, studio] });
         const requestedChannels: string[] = [];
@@ -339,13 +427,14 @@ describe("Harmonie", () => {
         await waitFor(() => expect(sent).toEqual({
             channel: 7,
             content: "Bonjour",
-            metadata: { instrument: "guitar", music_root: 0, music_mode: "major" },
+            metadata: { instrument: "guitar", music_root: 0, music_mode: "major", emotion: "neutral" },
         }));
         expect(requestedChannels).not.toContain("9");
         expect(keyChannelCreates).toBe(0);
     });
 
     it("sends a message with an instrument and plays a foreign message on piano", async () => {
+        emotionClassifier.classify.mockResolvedValue("neutral");
         mockLogin();
         const messages = [
             {
@@ -403,7 +492,7 @@ describe("Harmonie", () => {
         expect(sent).toEqual({
             channel: 5,
             content: "Salut",
-            metadata: { instrument: "guitar", music_root: 0, music_mode: "major" },
+            metadata: { instrument: "guitar", music_root: 0, music_mode: "major", emotion: "neutral" },
         });
     });
 

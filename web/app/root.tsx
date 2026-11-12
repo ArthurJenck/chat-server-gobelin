@@ -5,12 +5,15 @@ import {
     Outlet,
     Scripts,
     ScrollRestoration,
+    useLocation,
 } from "react-router";
 import { useEffect, useRef, useState } from "react";
 
 import type { Route } from "./+types/root";
 import RegistrationProvider from "./features/auth/RegistrationContext";
+import { getToken } from "./features/auth/token";
 import ConversationMonitor from "./features/chat/ConversationMonitor";
+import { preloadEmotionModel } from "./features/chat/emotionClient";
 import "./tokens.css";
 
 export const links: Route.LinksFunction = () => [
@@ -42,6 +45,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+    const location = useLocation();
     const swRegistered = useRef(false);
     const [online, setOnline] = useState(true);
 
@@ -55,6 +59,11 @@ export default function App() {
             window.removeEventListener("offline", updateOnline);
         };
     }, []);
+
+    useEffect(() => {
+        if (!getToken() && location.pathname !== "/login" && location.pathname !== "/register") return;
+        void preloadEmotionModel().catch(() => undefined);
+    }, [location.pathname]);
 
     useEffect(() => {
         if (!("serviceWorker" in navigator)) return;

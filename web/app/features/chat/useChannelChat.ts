@@ -158,28 +158,23 @@ export function useChannelChat(id: number, account: Account | null) {
         setBusy(true);
         setError("");
         try {
-            let emotion: Emotion | null = null;
             setClassifying(true);
-            try {
-                emotion = await classifyEmotion(text);
-            } catch {
-                emotion = null;
-            } finally {
-                setClassifying(false);
-            }
+            const emotion = await classifyEmotion(text);
+            setClassifying(false);
             await publishDueConversationRest(id).catch(() => false);
             const key = latestMusicKey(await getMessages(id));
             await sendMessage(id, text, {
                 instrument,
                 music_root: key.root,
                 music_mode: key.mode,
-                ...(emotion ? { emotion } : {}),
+                emotion,
             });
             setContent("");
             await refresh(keyChannelId);
         } catch (cause) {
             handleError(cause, "Envoi impossible.");
         } finally {
+            setClassifying(false);
             setBusy(false);
         }
     }

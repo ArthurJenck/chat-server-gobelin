@@ -308,6 +308,49 @@
     margin: 25px 20px;
 }
 
+.channel-pagination {
+    position: relative;
+    z-index: 11;
+    display: flex;
+    height: 32px;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin: 0 20px;
+}
+
+.channel-page-dot {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.channel-page-dot::before {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #d8d7d2;
+    content: "";
+}
+
+.channel-page-dot[aria-current="page"]::before {
+    width: 24px;
+    height: 24px;
+    background: #8e8d89;
+}
+
+.channel-page-dot:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+}
+
 .channel-composer {
     position: relative;
     z-index: 1;

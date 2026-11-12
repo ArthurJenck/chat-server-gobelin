@@ -5,6 +5,7 @@ type WorkerResult = { id: number; emotion?: unknown; error?: string };
 let worker: Worker | null = null;
 let unavailable = false;
 let nextId = 0;
+let preloadPromise: Promise<void> | null = null;
 const pending = new Map<number, {
     resolve: (emotion: Emotion) => void;
     reject: (error: Error) => void;
@@ -49,4 +50,9 @@ export function classifyEmotion(text: string): Promise<Emotion> {
     } catch (cause) {
         return Promise.reject(cause);
     }
+}
+
+export function preloadEmotionModel(): Promise<void> {
+    preloadPromise ??= classifyEmotion("Bonjour.").then(() => undefined);
+    return preloadPromise;
 }

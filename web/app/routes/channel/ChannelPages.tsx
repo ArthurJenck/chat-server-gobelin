@@ -28,12 +28,47 @@ export default function ChannelPages({
     const scroller = useRef<HTMLDivElement>(null);
     const sheets = useRef<(HTMLOListElement | null)[]>([]);
     const pageIndex = useRef(0);
+    const pageNavigation = useRef<gsap.core.Tween | null>(null);
     const [size, setSize] = useState({ width: 360, height: 600 });
     const [activePage, setActivePage] = useState(0);
     const blocks = useMemo(() => buildChannelStaffs(messages, size.width), [messages, size.width]);
     const pages = useMemo(() => applyPageMusicKeys(
         paginateChannelStaffs(blocks, size.height), size.width,
     ), [blocks, size.height, size.width]);
+    const firstVisiblePage = Math.max(0, Math.min(activePage - 2, pages.length - 5));
+
+    const syncActivePage = (scrollLeft: number, width: number) => {
+        const current = Math.min(
+            pages.length - 1,
+            Math.max(0, Math.round(pages.length - 1 - scrollLeft / (width || 1))),
+        );
+        if (pageIndex.current !== current) {
+            pageIndex.current = current;
+            setActivePage(current);
+        }
+    };
+
+    const goToPage = (target: number) => {
+        const element = scroller.current;
+        if (!element) return;
+        pageNavigation.current?.kill();
+        const scrollLeft = (pages.length - 1 - target) * element.clientWidth;
+        if (Math.abs(element.scrollLeft - scrollLeft) < 1) return;
+        if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+            element.scrollLeft = scrollLeft;
+            syncActivePage(scrollLeft, element.clientWidth);
+            return;
+        }
+        pageNavigation.current = gsap.to(element, {
+            scrollLeft,
+            duration: Math.max(0.2, Math.abs(scrollLeft - element.scrollLeft) / Math.max(1, element.clientWidth) * 0.4),
+            ease: "none",
+            onUpdate: () => syncActivePage(element.scrollLeft, element.clientWidth),
+            onComplete: () => { pageNavigation.current = null; },
+        });
+    };
+
+    useEffect(() => () => { pageNavigation.current?.kill(); }, []);
 
     useEffect(() => {
         if (!preloadEnabled) return;
@@ -92,6 +127,8 @@ export default function ChannelPages({
     useLayoutEffect(() => {
         const element = scroller.current;
         if (!element) return;
+        pageNavigation.current?.kill();
+        pageNavigation.current = null;
         const current = Math.min(pageIndex.current, pages.length - 1);
         element.scrollLeft = (pages.length - 1 - current) * element.clientWidth;
         pageIndex.current = current;
@@ -162,63 +199,85 @@ export default function ChannelPages({
         const wheel = (event: WheelEvent) => {
             if (Math.abs(event.deltaY) <= Math.abs(event.deltaX) || pages.length < 2) return;
             event.preventDefault();
+            pageNavigation.current?.kill();
+            pageNavigation.current = null;
             element.scrollLeft = Math.max(0, Math.min(
                 (pages.length - 1) * element.clientWidth,
                 element.scrollLeft - event.deltaY,
             ));
         };
+        const touchStart = () => {
+            pageNavigation.current?.kill();
+            pageNavigation.current = null;
+        };
         element.addEventListener("wheel", wheel, { passive: false });
-        return () => element.removeEventListener("wheel", wheel);
+        element.addEventListener("touchstart", touchStart, { passive: true });
+        return () => {
+            element.removeEventListener("wheel", wheel);
+            element.removeEventListener("touchstart", touchStart);
+        };
     }, [pages.length]);
 
     return (
-        <section
-            ref={container}
-            className="channel-messages"
-        >
-            <div
-                ref={scroller}
-                className="channel-messages-scroller"
-                role="region"
-                aria-label="Messages"
-                onScroll={(event) => {
-                    const current = Math.min(
-                        pages.length - 1,
-                        Math.max(0, Math.round(
-                            pages.length - 1 - event.currentTarget.scrollLeft / (event.currentTarget.clientWidth || 1),
-                        )),
-                    );
-                    pageIndex.current = current;
-                    setActivePage(current);
-                }}
+        <>
+            <section
+                ref={container}
+                className="channel-messages"
             >
-                <div className="channel-page-track" style={{ width: `${pages.length * 100}%` }}>
-                    <div className="channel-page-stage" style={{ width: `${100 / pages.length}%` }}>
-                        {pages.map((page, pageIndex) => (
-                            <ol
-                                key={page.map((block) => block.key).join("|") || "empty"}
-                                ref={(node) => { sheets.current[pageIndex] = node; }}
-                                className="channel-sheet"
-                                style={{ zIndex: pages.length - pageIndex,
-                                    "--channel-key-color": musicColor(pageGradientKey(page)),
-                                } as React.CSSProperties}
-                                aria-hidden={pageIndex !== activePage}
-                                inert={pageIndex !== activePage}
-                            >
-                                {page.map((block) => (
-                                    <MessageItem
-                                        key={block.key}
-                                        block={block}
-                                        isOwn={block.message.user_id === userId}
-                                        audio={audio}
-                                    />
-                                ))}
-                            </ol>
-                        ))}
-                        {!blocks.length && <p className="channel-empty">Aucun message.</p>}
+                <div
+                    ref={scroller}
+                    className="channel-messages-scroller"
+                    role="region"
+                    aria-label="Messages"
+                    onScroll={(event) => {
+                        syncActivePage(event.currentTarget.scrollLeft, event.currentTarget.clientWidth);
+                    }}
+                >
+                    <div className="channel-page-track" style={{ width: `${pages.length * 100}%` }}>
+                        <div className="channel-page-stage" style={{ width: `${100 / pages.length}%` }}>
+                            {pages.map((page, pageIndex) => (
+                                <ol
+                                    key={page.map((block) => block.key).join("|") || "empty"}
+                                    ref={(node) => { sheets.current[pageIndex] = node; }}
+                                    className="channel-sheet"
+                                    style={{ zIndex: pages.length - pageIndex,
+                                        "--channel-key-color": musicColor(pageGradientKey(page)),
+                                    } as React.CSSProperties}
+                                    aria-hidden={pageIndex !== activePage}
+                                    inert={pageIndex !== activePage}
+                                >
+                                    {page.map((block) => (
+                                        <MessageItem
+                                            key={block.key}
+                                            block={block}
+                                            isOwn={block.message.user_id === userId}
+                                            audio={audio}
+                                        />
+                                    ))}
+                                </ol>
+                            ))}
+                            {!blocks.length && <p className="channel-empty">Aucun message.</p>}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+            {pages.length > 1 && (
+                <nav className="channel-pagination" aria-label="Pages des messages">
+                    {pages.slice(firstVisiblePage, firstVisiblePage + 5).map((_, index) => {
+                        const targetPage = firstVisiblePage + index;
+                        return (
+                            <button
+                                key={targetPage}
+                                type="button"
+                                className="channel-page-dot"
+                                aria-label={`Aller à la page ${targetPage + 1} sur ${pages.length}`}
+                                aria-current={targetPage === activePage ? "page" : undefined}
+                                onClick={() => goToPage(targetPage)}
+                            />
+                        );
+                    })}
+                </nav>
+            )}
+        </>
     );
 }

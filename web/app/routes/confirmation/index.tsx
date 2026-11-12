@@ -6,13 +6,21 @@ import { login, register } from "../../features/auth/api";
 import { useRegistration } from "../../features/auth/RegistrationContext";
 import { getToken, setToken } from "../../features/auth/token";
 import { useAccount } from "../../features/auth/useAccount";
-import { accountInstrument, saveInstrument } from "../../features/users/instrument";
+import {
+    accountInstrument,
+    saveInstrument,
+} from "../../features/users/instrument";
 import { PATHS } from "../../shared/config";
 
 export default function Confirmation() {
     const navigate = useNavigate();
     const hasSession = Boolean(getToken());
-    const { registration, setRegistration, selectedInstrument, setSelectedInstrument } = useRegistration();
+    const {
+        registration,
+        setRegistration,
+        selectedInstrument,
+        setSelectedInstrument,
+    } = useRegistration();
     const { account, loading, error: accountError } = useAccount(false, false);
     const [busy, setBusy] = useState(false);
     const [created, setCreated] = useState(false);
@@ -26,11 +34,21 @@ export default function Confirmation() {
         } else if (!selectedInstrument) {
             if (hasSession && loading) return;
             void navigate(
-                account && accountInstrument(account) ? PATHS.home : PATHS.instrument,
+                account && accountInstrument(account)
+                    ? PATHS.home
+                    : PATHS.instrument,
                 { replace: true },
             );
         }
-    }, [account, completed, hasSession, loading, navigate, registration, selectedInstrument]);
+    }, [
+        account,
+        completed,
+        hasSession,
+        loading,
+        navigate,
+        registration,
+        selectedInstrument,
+    ]);
 
     async function continueToApp() {
         if (!selectedInstrument || busy) return;
@@ -42,15 +60,24 @@ export default function Confirmation() {
                 await saveInstrument(account, selectedInstrument);
                 setCompleted(true);
                 setSelectedInstrument(null);
-                void navigate(accountInstrument(account) ? PATHS.profile : PATHS.home, {
-                    replace: true,
-                });
+                void navigate(
+                    accountInstrument(account) ? PATHS.profile : PATHS.home,
+                    {
+                        replace: true,
+                    },
+                );
             } else if (!hasSession && registration) {
                 if (!created) {
-                    await register(registration.username, registration.password, selectedInstrument);
+                    await register(
+                        registration.username,
+                        registration.password,
+                        selectedInstrument,
+                    );
                     setCreated(true);
                 }
-                setToken(await login(registration.username, registration.password));
+                setToken(
+                    await login(registration.username, registration.password),
+                );
                 setCompleted(true);
                 setRegistration(null);
                 setSelectedInstrument(null);
@@ -60,7 +87,9 @@ export default function Confirmation() {
             setError(
                 cause instanceof Error
                     ? cause.message
-                    : account ? "Enregistrement impossible." : "Inscription impossible.",
+                    : account
+                      ? "Enregistrement impossible."
+                      : "Inscription impossible.",
             );
         } finally {
             setBusy(false);
@@ -70,14 +99,6 @@ export default function Confirmation() {
     if (hasSession && (loading || !account)) {
         return (
             <main className="confirmation-page">
-                <button
-                    className="confirmation-back"
-                    type="button"
-                    aria-label="Retour"
-                    onClick={() => void navigate(PATHS.instrument)}
-                >
-                    <img src="/pictos/arrow.svg" alt="" />
-                </button>
                 {loading ? (
                     <p>Chargement du profil…</p>
                 ) : (

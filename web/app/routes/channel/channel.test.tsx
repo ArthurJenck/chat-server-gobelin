@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,14 +10,17 @@ import { renderApp } from "../../../test/render-app";
 import { server } from "../../../test/setup";
 
 const api = "http://localhost:4000";
-const emotionClassifier = vi.hoisted(() => ({ classify: vi.fn() }));
+const emotionClassifier = vi.hoisted(() => ({ classify: vi.fn(), preload: vi.fn() }));
 vi.mock("../../features/chat/emotionClient", () => ({
     classifyEmotion: emotionClassifier.classify,
+    preloadEmotionModel: emotionClassifier.preload,
 }));
 
 beforeEach(() => {
     emotionClassifier.classify.mockReset();
     emotionClassifier.classify.mockRejectedValue(new Error("Modèle indisponible"));
+    emotionClassifier.preload.mockReset();
+    emotionClassifier.preload.mockResolvedValue(undefined);
 });
 
 const account: Account = {
@@ -281,5 +284,34 @@ describe("Channel page", () => {
         await waitFor(() => expect(document.querySelectorAll(".channel-sheet").length).toBeGreaterThan(initialCount));
         expect(document.querySelector(".channel-page")).toHaveAttribute("data-keyboard-open", "true");
         Object.defineProperty(window, "innerHeight", { configurable: true, value: originalWindowHeight });
+    });
+
+    it("navigates with five visible page dots and follows manual scrolling", async () => {
+        messageAreaHeight = 120;
+        mockChannel(Array.from({ length: 8 }, (_, index) => message(index + 1, `Message ${index + 1}`)));
+        renderApp("/channels/5");
+
+        await waitFor(() => expect(document.querySelectorAll(".channel-sheet")).toHaveLength(8));
+        const scroller = screen.getByRole("region", { name: "Messages" });
+        const pagination = screen.getByRole("navigation", { name: "Pages des messages" });
+        expect(pagination.previousElementSibling).toHaveClass("channel-messages");
+        expect(pagination.nextElementSibling).toHaveClass("channel-composer");
+        expect(within(pagination).getAllByRole("button")).toHaveLength(5);
+        expect(screen.getByRole("button", { name: "Aller à la page 1 sur 8" }))
+            .toHaveAttribute("aria-current", "page");
+
+        await userEvent.click(screen.getByRole("button", { name: "Aller à la page 5 sur 8" }));
+        await waitFor(() => expect(scroller.scrollLeft).toBe(3 * 360), { timeout: 2500 });
+        expect(screen.getByRole("button", { name: "Aller à la page 5 sur 8" }))
+            .toHaveAttribute("aria-current", "page");
+        expect(screen.getByRole("button", { name: "Aller à la page 3 sur 8" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Aller à la page 7 sur 8" })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Aller à la page 1 sur 8" })).not.toBeInTheDocument();
+
+        scroller.scrollLeft = 360;
+        fireEvent.scroll(scroller);
+        expect(screen.getByRole("button", { name: "Aller à la page 7 sur 8" }))
+            .toHaveAttribute("aria-current", "page");
+        expect(screen.getByRole("button", { name: "Aller à la page 8 sur 8" })).toBeInTheDocument();
     });
 });

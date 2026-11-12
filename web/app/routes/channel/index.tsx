@@ -172,6 +172,13 @@ export default function ChannelPage() {
                         id="message-content"
                         value={content}
                         onChange={(event) => setContent(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+                            if (event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) return;
+                            event.preventDefault();
+                            if (event.metaKey || event.ctrlKey || event.altKey) return;
+                            event.currentTarget.form?.requestSubmit();
+                        }}
                         placeholder="Écris ton message..."
                         rows={1}
                         required
