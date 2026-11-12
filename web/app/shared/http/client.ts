@@ -2,7 +2,7 @@ import { clearToken, getToken } from "../../features/auth/token";
 import { NAMESPACE } from "../config";
 import { ApiError } from "./ApiError";
 
-function getApiUrl() {
+export function getApiUrl() {
     return (
         import.meta.env.VITE_API_URL ||
         `${window.location.protocol}//${window.location.hostname}:4000`

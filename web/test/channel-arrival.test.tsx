@@ -24,13 +24,19 @@ function message(id: number): Message {
 
 beforeEach(() => {
     vi.useFakeTimers();
+    vi.stubGlobal("WebSocket", undefined);
+    vi.spyOn(Math, "random").mockReturnValue(0);
     api.getMessages.mockReset();
     api.sendMessage.mockReset();
 });
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+});
 
-it("distinguishes the initial load from newly polled messages and does not repeat them", async () => {
+it("distinguishes the initial load from fallback messages and does not repeat them", async () => {
     let messages = [message(1)];
     api.getMessages.mockImplementation(async () => messages);
     const { result } = renderHook(() => useChannelChat(7, account), {
@@ -41,9 +47,9 @@ it("distinguishes the initial load from newly polled messages and does not repea
     expect(result.current.arrival).toBeNull();
 
     messages = [message(1), message(2), message(3)];
-    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
     expect(result.current.arrival).toEqual({ sequence: 1, source: "poll", ids: ["2", "3"] });
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
     expect(result.current.arrival?.sequence).toBe(1);
 });

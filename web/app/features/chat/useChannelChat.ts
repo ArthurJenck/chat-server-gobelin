@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
     KEY_CHANNEL_NAME,
-    MESSAGE_REFRESH_MS,
     NAMESPACE,
+    PARIS_TIME_ZONE,
     PATHS,
 } from "../../shared/config";
 import { ApiError } from "../../shared/http/ApiError";
@@ -23,8 +23,28 @@ import { emotionCacheKey, readCachedEmotion, writeCachedEmotion } from "./emotio
 import { classifyEmotion } from "./emotionClient";
 import { messageEmotion, type Emotion } from "./emotion";
 import { messageIdentity } from "./channelScore";
+import { watchChannelSocket } from "./channelSocket";
 
 const AVAILABLE_KEY: KeyState = { holderId: null, holderName: null };
+const parisDay = new Intl.DateTimeFormat("en-CA", {
+    timeZone: PARIS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+});
+
+function untilParisMidnight() {
+    const now = Date.now();
+    const today = parisDay.format(now);
+    let lower = now;
+    let upper = now + 26 * 60 * 60 * 1000;
+    while (upper - lower > 1_000) {
+        const middle = Math.floor((lower + upper) / 2);
+        if (parisDay.format(middle) === today) lower = middle;
+        else upper = middle;
+    }
+    return Math.max(1, upper - now);
+}
 
 export type MessageArrival = {
     sequence: number;
@@ -57,6 +77,8 @@ export function useChannelChat(id: number, account: Account | null) {
     const failedEmotions = useRef(new Set<string>());
     const knownMessages = useRef<Set<string> | null>(null);
     const sentIds = useRef(new Set<string>());
+    const sending = useRef(false);
+    const requestSyncRef = useRef<((messages: boolean, key: boolean) => Promise<void>) | null>(null);
     const arrivalSequence = useRef(0);
 
     useEffect(() => {
@@ -111,60 +133,148 @@ export function useChannelChat(id: number, account: Account | null) {
         return () => { active = false; };
     }, [id, visiblePage]);
 
-    function handleError(cause: unknown, fallback: string) {
+    const handleError = useCallback((cause: unknown, fallback: string) => {
         if (cause instanceof ApiError && cause.status === 401)
             void navigate(PATHS.welcome, { replace: true });
         else setError(cause instanceof Error ? cause.message : fallback);
-    }
-
-    const refresh = useCallback(
-        async (technicalId: number | null, source: "initial" | "poll" | "sent" = "poll") => {
-            const [nextMessages, nextKey] = await Promise.all([
-                getMessages(id),
-                technicalId === null
-                    ? Promise.resolve(AVAILABLE_KEY)
-                    : readKeyState(technicalId),
-            ]);
-            const filtered = nextMessages.filter((message) => !message.content.includes("clock tick"));
-            const previous = knownMessages.current;
-            const identities = new Set(filtered.map(messageIdentity));
-            knownMessages.current = identities;
-            setMessages((current) => JSON.stringify(current) === JSON.stringify(filtered)
-                ? current
-                : filtered);
-            if (source === "poll" && previous) {
-                const ids = filtered.map(messageIdentity).filter((identity) =>
-                    !previous.has(identity) && !sentIds.current.has(identity),
-                );
-                if (ids.length)
-                    setArrival({ sequence: ++arrivalSequence.current, source: "poll", ids });
-            }
-            setKeyState(nextKey);
-        },
-        [id],
-    );
+    }, [navigate]);
 
     useEffect(() => {
         if (!account || !channel) return;
         let active = true;
-        let timer: ReturnType<typeof setInterval> | undefined;
+        let stopSocket: (() => void) | null = null;
+        let midnightTimer: ReturnType<typeof setTimeout> | null = null;
+        let retryTimer: ReturnType<typeof setTimeout> | null = null;
+        let running = false;
+        let queuedMessages = false;
+        let queuedKey = false;
+        let retryMessages = false;
+        let retryKey = false;
+        let waiters: Array<{ resolve: () => void; reject: (cause: unknown) => void }> = [];
         setLoading(true);
         setKeyChannelId(null);
-        (async () => {
+
+        const begin = async () => {
             const technicalId = hasKey ? (await ensureKeyChannel(account)).id : null;
             if (!active) return;
             setKeyChannelId(technicalId);
-            await refresh(technicalId, "initial");
-            if (active) {
-                setLoading(false);
-                timer = setInterval(() => {
-                    if (document.visibilityState === "visible")
-                        void refresh(technicalId, "poll").catch((cause: unknown) =>
-                            handleError(cause, "Actualisation impossible."),
+
+            const loadSnapshot = async (loadMessages: boolean, loadKey: boolean) => {
+                const [nextMessages, nextKey] = await Promise.all([
+                    loadMessages ? getMessages(id) : Promise.resolve(null),
+                    loadKey && technicalId !== null
+                        ? readKeyState(technicalId)
+                        : Promise.resolve(null),
+                ]);
+                if (!active) return;
+                if (nextMessages !== null) {
+                    const filtered = nextMessages.filter((message) => !message.content.includes("clock tick"));
+                    const previous = knownMessages.current;
+                    const identities = new Set(filtered.map(messageIdentity));
+                    knownMessages.current = identities;
+                    setMessages((current) => JSON.stringify(current) === JSON.stringify(filtered)
+                        ? current
+                        : filtered);
+                    if (previous) {
+                        const ids = filtered.map(messageIdentity).filter((identity, index) =>
+                            !previous.has(identity) && !sentIds.current.has(identity) &&
+                            !(sending.current && filtered[index].user_id === account.id),
                         );
-                }, MESSAGE_REFRESH_MS);
+                        if (ids.length)
+                            setArrival({ sequence: ++arrivalSequence.current, source: "poll", ids });
+                    }
+                }
+                if (nextKey !== null) setKeyState(nextKey);
+            };
+
+            function scheduleRetry(loadMessages: boolean, loadKey: boolean, cause: unknown) {
+                if (cause instanceof ApiError && cause.status === 401) return;
+                retryMessages ||= loadMessages;
+                retryKey ||= loadKey;
+                if (retryTimer !== null) return;
+                retryTimer = setTimeout(() => {
+                    retryTimer = null;
+                    if (!active || !navigator.onLine || document.visibilityState !== "visible") return;
+                    const messages = retryMessages;
+                    const key = retryKey;
+                    retryMessages = false;
+                    retryKey = false;
+                    void requestSync(messages, key).catch((error: unknown) =>
+                        handleError(error, "Actualisation impossible."),
+                    );
+                }, 15_000 + Math.random() * 10_000);
             }
-        })()
+
+            const drain = async () => {
+                if (running) return;
+                running = true;
+                while (active && (queuedMessages || queuedKey)) {
+                    const loadMessages = queuedMessages;
+                    const loadKey = queuedKey;
+                    queuedMessages = false;
+                    queuedKey = false;
+                    const currentWaiters = waiters;
+                    waiters = [];
+                    try {
+                        await loadSnapshot(loadMessages, loadKey);
+                        if (loadMessages) retryMessages = false;
+                        if (loadKey) retryKey = false;
+                        if (!retryMessages && !retryKey && retryTimer !== null) {
+                            clearTimeout(retryTimer);
+                            retryTimer = null;
+                        }
+                        currentWaiters.forEach(({ resolve }) => resolve());
+                    } catch (cause) {
+                        scheduleRetry(loadMessages, loadKey, cause);
+                        currentWaiters.forEach(({ reject }) => reject(cause));
+                    }
+                }
+                running = false;
+            };
+            const requestSync = (loadMessages: boolean, loadKey: boolean) =>
+                new Promise<void>((resolve, reject) => {
+                    if (!active) {
+                        resolve();
+                        return;
+                    }
+                    queuedMessages ||= loadMessages;
+                    queuedKey ||= loadKey;
+                    waiters.push({ resolve, reject });
+                    void drain();
+                });
+            const syncOrReport = (loadMessages: boolean, loadKey: boolean) => {
+                void requestSync(loadMessages, loadKey).catch((cause: unknown) =>
+                    handleError(cause, "Actualisation impossible."),
+                );
+            };
+            requestSyncRef.current = requestSync;
+            stopSocket = watchChannelSocket(
+                technicalId === null ? [id] : [id, technicalId],
+                {
+                    onOpen: () => syncOrReport(true, technicalId !== null),
+                    onEvents: (events) => {
+                        const mainChanged = events.some((event) => event.channelId === id);
+                        const keyChanged = technicalId !== null &&
+                            events.some((event) => event.channelId === technicalId);
+                        if (mainChanged || keyChanged) syncOrReport(mainChanged, keyChanged);
+                    },
+                    onFallback: () => syncOrReport(true, technicalId !== null),
+                },
+            );
+            const scheduleMidnight = () => {
+                midnightTimer = setTimeout(() => {
+                    if (!active) return;
+                    setKeyState(AVAILABLE_KEY);
+                    if (navigator.onLine && document.visibilityState === "visible")
+                        syncOrReport(false, true);
+                    scheduleMidnight();
+                }, untilParisMidnight());
+            };
+            if (technicalId !== null) scheduleMidnight();
+            await requestSync(true, technicalId !== null);
+            if (active) setLoading(false);
+        };
+        void begin()
             .catch((cause: unknown) => {
                 if (!active) return;
                 setLoading(false);
@@ -172,9 +282,14 @@ export function useChannelChat(id: number, account: Account | null) {
             });
         return () => {
             active = false;
-            if (timer) clearInterval(timer);
+            stopSocket?.();
+            if (midnightTimer !== null) clearTimeout(midnightTimer);
+            if (retryTimer !== null) clearTimeout(retryTimer);
+            waiters.forEach(({ resolve }) => resolve());
+            waiters = [];
+            requestSyncRef.current = null;
         };
-    }, [account, channel?.id, hasKey, refresh]);
+    }, [account, channel?.id, hasKey, handleError, id]);
 
     async function submit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -189,6 +304,7 @@ export function useChannelChat(id: number, account: Account | null) {
             setClassifying(false);
             await publishDueConversationRest(id).catch(() => false);
             const key = latestMusicKey(await getMessages(id));
+            sending.current = true;
             const sent = await sendMessage(id, text, {
                 instrument,
                 music_root: key.root,
@@ -198,11 +314,12 @@ export function useChannelChat(id: number, account: Account | null) {
             const sentIdentity = messageIdentity(sent);
             sentIds.current.add(sentIdentity);
             setContent("");
-            await refresh(keyChannelId, "sent");
+            await requestSyncRef.current?.(true, keyChannelId !== null);
             setArrival({ sequence: ++arrivalSequence.current, source: "sent", ids: [sentIdentity] });
         } catch (cause) {
             handleError(cause, "Envoi impossible.");
         } finally {
+            sending.current = false;
             setClassifying(false);
             setBusy(false);
         }
@@ -214,6 +331,7 @@ export function useChannelChat(id: number, account: Account | null) {
         setError("");
         try {
             setKeyState(await toggleKeyState(keyChannelId, account, keyState));
+            await requestSyncRef.current?.(false, true);
         } catch (cause) {
             handleError(cause, "Mise à jour de la clé impossible.");
         } finally {
