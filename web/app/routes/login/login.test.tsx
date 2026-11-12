@@ -23,7 +23,7 @@ describe("Login page", () => {
         );
         expect(
             screen.getByRole("link", { name: "J’ai oublié mon mot de passe" }),
-        ).toHaveAttribute("href", "/mot-de-passe-oublie");
+        ).toHaveAttribute("href", "/forgot-password");
         expect(
             screen
                 .getByRole("button", { name: "Continuer" })

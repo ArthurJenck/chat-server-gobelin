@@ -42,6 +42,7 @@ describe("sound arrangement", () => {
         const settings = {
             ...DEFAULT_SOUND_SETTINGS,
             chordPlacement: "above" as const,
+            thirdPlacement: "off" as const,
         };
         expect(harmonyAt(0, settings)).toEqual([64, 67]);
         expect(harmonyAt(0.25, settings)).toEqual([]);
@@ -52,6 +53,7 @@ describe("sound arrangement", () => {
         const settings = {
             ...DEFAULT_SOUND_SETTINGS,
             chordPlacement: "below" as const,
+            thirdPlacement: "off" as const,
         };
         expect(harmonyAt(0, settings)).toEqual([52, 55]);
         expect(harmonyAt(0.5, settings)).toEqual([52, 55]);
@@ -82,6 +84,7 @@ describe("sound arrangement", () => {
         const base = {
             ...DEFAULT_SOUND_SETTINGS,
             chordPlacement: "above" as const,
+            thirdPlacement: "off" as const,
         };
         const held = createArrangement(plan, {
             ...base,

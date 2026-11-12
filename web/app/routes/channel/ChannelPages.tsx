@@ -8,13 +8,16 @@ import type { Message } from "../../features/messages/types";
 import type { ChannelAudioEngine } from "../../features/sound/channelAudioEngine";
 import type { Instrument } from "../../features/sound/soundConfig";
 import { messageInstrument } from "../../features/chat/messageSound";
+import { glissandoPerformance, messagePerformance, pagePerformances } from "../../features/chat/channelScore";
+import { useChannelPlayback } from "../../features/chat/useChannelPlayback";
+import type { MessageArrival } from "../../features/chat/useChannelChat";
 
 export default function ChannelPages({
     messages,
     userId,
     audio,
     preloadEnabled,
-    sentMessageCount,
+    arrival,
     onKeyChange,
     onVisibleMessagesChange,
 }: {
@@ -22,7 +25,7 @@ export default function ChannelPages({
     userId: number | null;
     audio: ChannelAudioEngine;
     preloadEnabled: boolean;
-    sentMessageCount: number;
+    arrival: MessageArrival | null;
     onKeyChange: (key: MusicKey) => void;
     onVisibleMessagesChange: (messages: Message[]) => void;
 }) {
@@ -33,8 +36,14 @@ export default function ChannelPages({
     const pressedStaff = useRef<HTMLButtonElement | null>(null);
     const pageIndex = useRef(0);
     const pageNavigation = useRef<gsap.core.Tween | null>(null);
+    const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const navigation = useRef<{ start: number; gliss: boolean; sentIds: string[] | null } | null>(null);
+    const initialPlayed = useRef(false);
+    const handledArrival = useRef(0);
     const [size, setSize] = useState({ width: 360, height: 600 });
+    const [sizeReady, setSizeReady] = useState(false);
     const [activePage, setActivePage] = useState(0);
+    const playback = useChannelPlayback(audio);
     const blocks = useMemo(() => buildChannelStaffs(messages, size.width), [messages, size.width]);
     const pages = useMemo(() => applyPageMusicKeys(
         paginateChannelStaffs(blocks, size.height), size.width,
@@ -45,6 +54,42 @@ export default function ChannelPages({
         { length: visiblePageCount },
         (_, index) => firstVisiblePage + visiblePageCount - 1 - index,
     );
+
+    const finishNavigation = () => {
+        if (settleTimer.current) clearTimeout(settleTimer.current);
+        settleTimer.current = null;
+        const current = navigation.current;
+        navigation.current = null;
+        if (!current) return;
+        const page = pages[pageIndex.current] ?? [];
+        const performances = pagePerformances(page);
+        const selected = current.sentIds
+            ? performances.filter((item) => current.sentIds!.includes(item.id))
+            : performances;
+        if (current.gliss) playback.append(selected);
+        else playback.replace(selected);
+    };
+
+    const scheduleSettle = () => {
+        if (settleTimer.current) clearTimeout(settleTimer.current);
+        settleTimer.current = setTimeout(() => {
+            if (pageNavigation.current) return;
+            finishNavigation();
+        }, 700);
+    };
+
+    const startNavigation = (sentIds: string[] | null = null) => {
+        if (settleTimer.current) clearTimeout(settleTimer.current);
+        navigation.current = { start: pageIndex.current, gliss: false, sentIds };
+        playback.cancel();
+    };
+
+    const maybeGlissando = (target: number) => {
+        const current = navigation.current;
+        if (!current || current.gliss || Math.abs(target - current.start) < 3) return;
+        current.gliss = true;
+        playback.replace([glissandoPerformance(target > current.start ? "older" : "newer")]);
+    };
 
     const staffAtPoint = (x: number, y: number) => {
         for (const staff of sheets.current[pageIndex.current]?.querySelectorAll<HTMLButtonElement>(".channel-staff") ?? []) {
@@ -94,17 +139,26 @@ export default function ChannelPages({
             pageIndex.current = current;
             setActivePage(current);
         }
+        maybeGlissando(current);
     };
 
-    const goToPage = (target: number, maxDuration = Infinity) => {
+    const goToPage = (target: number, maxDuration = Infinity, sentIds: string[] | null = null) => {
         const element = scroller.current;
         if (!element) return;
         pageNavigation.current?.kill();
+        pageNavigation.current = null;
         const scrollLeft = (pages.length - 1 - target) * element.clientWidth;
-        if (Math.abs(element.scrollLeft - scrollLeft) < 1) return;
+        if (Math.abs(element.scrollLeft - scrollLeft) < 1) {
+            if (sentIds) playback.replace(pagePerformances(pages[target] ?? [])
+                .filter((item) => sentIds.includes(item.id)));
+            return;
+        }
+        startNavigation(sentIds);
+        maybeGlissando(target);
         if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
             element.scrollLeft = scrollLeft;
             syncActivePage(scrollLeft, element.clientWidth);
+            finishNavigation();
             return;
         }
         pageNavigation.current = gsap.to(element, {
@@ -112,15 +166,36 @@ export default function ChannelPages({
             duration: Math.min(maxDuration, Math.max(0.2, Math.abs(scrollLeft - element.scrollLeft) / Math.max(1, element.clientWidth) * 0.4)),
             ease: "none",
             onUpdate: () => syncActivePage(element.scrollLeft, element.clientWidth),
-            onComplete: () => { pageNavigation.current = null; },
+            onComplete: () => {
+                pageNavigation.current = null;
+                syncActivePage(element.scrollLeft, element.clientWidth);
+                finishNavigation();
+            },
         });
     };
 
     useEffect(() => {
-        if (sentMessageCount > 0) goToPage(0, 1.5);
-    }, [sentMessageCount]);
+        if (!preloadEnabled || !sizeReady || initialPlayed.current) return;
+        initialPlayed.current = true;
+        playback.replace(pagePerformances(pages[0] ?? []));
+    }, [preloadEnabled, sizeReady]);
 
-    useEffect(() => () => { pageNavigation.current?.kill(); }, []);
+    useEffect(() => {
+        if (!arrival || !sizeReady || handledArrival.current === arrival.sequence) return;
+        handledArrival.current = arrival.sequence;
+        if (arrival.source === "sent") {
+            goToPage(0, 1.5, arrival.ids);
+            return;
+        }
+        if (pageIndex.current !== 0 || navigation.current) return;
+        playback.append(pagePerformances(pages[0] ?? []).filter((item) =>
+            arrival.ids.includes(item.id)));
+    }, [arrival, pages, sizeReady]);
+
+    useEffect(() => () => {
+        pageNavigation.current?.kill();
+        if (settleTimer.current) clearTimeout(settleTimer.current);
+    }, []);
 
     useEffect(() => {
         if (!preloadEnabled) return;
@@ -129,7 +204,7 @@ export default function ChannelPages({
             if (block.plan.events.some((event) => event.midi !== null))
                 visible.add(messageInstrument(block.message));
         }
-        audio.preload([...visible]);
+        audio.preload(["piano", ...[...visible].filter((instrument) => instrument !== "piano")]);
     }, [activePage, audio, pages, preloadEnabled]);
 
     useEffect(() => {
@@ -160,6 +235,7 @@ export default function ChannelPages({
             setSize((current) => current.width === width && current.height === height
                 ? current
                 : { width, height });
+            setSizeReady(true);
         };
         update();
         if (typeof ResizeObserver === "undefined") {
@@ -213,12 +289,15 @@ export default function ChannelPages({
         const wheel = (event: WheelEvent) => {
             if (Math.abs(event.deltaY) <= Math.abs(event.deltaX) || pages.length < 2) return;
             event.preventDefault();
+            if (!navigation.current) startNavigation();
             pageNavigation.current?.kill();
             pageNavigation.current = null;
             element.scrollLeft = Math.max(0, Math.min(
                 (pages.length - 1) * element.clientWidth,
                 element.scrollLeft - event.deltaY,
             ));
+            syncActivePage(element.scrollLeft, element.clientWidth);
+            scheduleSettle();
         };
         const touchStart = () => {
             pageNavigation.current?.kill();
@@ -244,7 +323,12 @@ export default function ChannelPages({
                     role="region"
                     aria-label="Messages"
                     onScroll={(event) => {
+                        if (!navigation.current && !pageNavigation.current) {
+                            const expected = (pages.length - 1 - pageIndex.current) * event.currentTarget.clientWidth;
+                            if (Math.abs(event.currentTarget.scrollLeft - expected) > 1) startNavigation();
+                        }
                         syncActivePage(event.currentTarget.scrollLeft, event.currentTarget.clientWidth);
+                        if (navigation.current && !pageNavigation.current) scheduleSettle();
                     }}
                 >
                     <div className="channel-page-track" style={{ width: `${pages.length * 100}%` }}>
@@ -274,23 +358,32 @@ export default function ChannelPages({
                                 staffAtPoint(event.clientX, event.clientY)?.click();
                             }}
                         >
-                            {pages.map((page, pageIndex) => (
+                            {pages.map((page, sheetIndex) => (
                                 <ol
-                                    key={pageIndex}
-                                    ref={(node) => { sheets.current[pageIndex] = node; }}
+                                    key={sheetIndex}
+                                    ref={(node) => { sheets.current[sheetIndex] = node; }}
                                     className="channel-sheet"
-                                    style={{ zIndex: pages.length - pageIndex,
+                                    style={{ zIndex: pages.length - sheetIndex,
                                         "--channel-key-color": musicColor(pageGradientKey(page)),
                                     } as React.CSSProperties}
-                                    aria-hidden={pageIndex !== activePage}
-                                    inert={pageIndex !== activePage}
+                                    aria-hidden={sheetIndex !== activePage}
+                                    inert={sheetIndex !== activePage}
                                 >
                                     {page.map((block) => (
                                         <MessageItem
                                             key={block.key}
                                             block={block}
                                             isOwn={block.message.user_id === userId}
-                                            audio={audio}
+                                            onPlay={(selected) => {
+                                                pageNavigation.current?.kill();
+                                                pageNavigation.current = null;
+                                                if (settleTimer.current) clearTimeout(settleTimer.current);
+                                                navigation.current = null;
+                                                playback.replace([messagePerformance(selected, pages[pageIndex.current] ?? [])]);
+                                            }}
+                                            visual={playback.visuals.find((visual) => visual.blockKeys.includes(block.key)) ?? null}
+                                            loading={playback.loadingKey === block.key}
+                                            error={playback.error?.key === block.key ? playback.error.text : ""}
                                         />
                                     ))}
                                 </ol>

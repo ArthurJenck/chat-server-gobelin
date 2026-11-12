@@ -77,13 +77,15 @@
     margin-top: 65px;
 }
 
-.confirmation-details p {
+.confirmation-details p,
+.confirmation-detail-button {
     box-sizing: border-box;
     display: flex;
     min-height: 40px;
     align-items: center;
     justify-content: center;
     margin: 0;
+    border: 0;
     border-bottom: 3px dotted var(--color-ink);
     font-size: 20px;
     line-height: 28px;

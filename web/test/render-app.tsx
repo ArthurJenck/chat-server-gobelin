@@ -26,7 +26,7 @@ export function renderApp(path: string | string[] = "/") {
                         children: [
                             { path: "/bienvenue", element: <Welcome /> },
                             { path: "/login", element: <Login /> },
-                            { path: "/mot-de-passe-oublie", element: <ForgotPassword /> },
+                            { path: "/forgot-password", element: <ForgotPassword /> },
                             { path: "/register", element: <Register /> },
                         ],
                     },

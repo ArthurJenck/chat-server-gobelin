@@ -79,7 +79,7 @@ describe("Confirmation page", () => {
         };
         server.use(
             http.get(`${api}/me`, () => HttpResponse.json(current)),
-            http.post(`${api}/user/edit`, async ({ request }) => {
+            http.put(`${api}/user`, async ({ request }) => {
                 saved = await request.json();
                 current.metadata.harmonie.instrument = "harp";
                 return HttpResponse.json(current);
@@ -147,7 +147,7 @@ describe("Confirmation page", () => {
                 }
                 return HttpResponse.json(current);
             }),
-            http.post(`${api}/user/edit`, async ({ request }) => {
+            http.put(`${api}/user`, async ({ request }) => {
                 saved = await request.json();
                 current.metadata.harmonie.instrument = "harp";
                 return HttpResponse.json(current);

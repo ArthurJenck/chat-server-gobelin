@@ -6,6 +6,7 @@ type ProfileSummaryProps = {
     username?: string;
     instrument: Instrument | null;
     onBack: () => void;
+    onInstrumentClick?: () => void;
     children: ReactNode;
 };
 
@@ -13,6 +14,7 @@ export default function ProfileSummary({
     username,
     instrument,
     onBack,
+    onInstrumentClick,
     children,
 }: ProfileSummaryProps) {
     return (
@@ -44,7 +46,18 @@ export default function ProfileSummary({
             {username && instrument && (
                 <div className="confirmation-details">
                     <p>{username}</p>
-                    <p>{INSTRUMENTS[instrument].label}</p>
+                    {onInstrumentClick ? (
+                        <button
+                            type="button"
+                            className="confirmation-detail-button"
+                            onClick={onInstrumentClick}
+                            aria-label={`Modifier l’instrument : ${INSTRUMENTS[instrument].label}`}
+                        >
+                            {INSTRUMENTS[instrument].label}
+                        </button>
+                    ) : (
+                        <p>{INSTRUMENTS[instrument].label}</p>
+                    )}
                 </div>
             )}
             {children}

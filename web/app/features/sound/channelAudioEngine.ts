@@ -5,6 +5,13 @@ import type { SoundPlan } from "./soundPlan";
 
 type ChannelSoundfont = ReturnType<typeof Soundfont>;
 
+export function channelScoreDuration(plan: SoundPlan, settings: SoundSettings) {
+    const step = plan.noteStep ?? settings.intervalMs / 1000;
+    return Math.max(0, ...plan.events.map((event) =>
+        event.start + (event.rest === "whole" ? 4 : event.rest === "half" ? 2 : 1) * step,
+    ));
+}
+
 export function createChannelAudioEngine(settings: SoundSettings) {
     let context: AudioContext | null = null;
     let filter: BiquadFilterNode | null = null;
@@ -81,19 +88,38 @@ export function createChannelAudioEngine(settings: SoundSettings) {
         }
     }
 
+    async function prepare(instruments: Instrument[]) {
+        await Promise.allSettled([...new Set(instruments)].map((instrument) => load(instrument)));
+    }
+
     async function play(
         plan: SoundPlan,
         playbackSettings: SoundSettings,
         onFinished: () => void,
         signal: AbortSignal,
+        onScheduled?: (getPlayhead: () => number | null) => void,
+        maxNoteDuration?: number,
+        onEnded?: () => void,
     ): Promise<() => void> {
         const arrangement = createArrangement(plan, playbackSettings);
         if (arrangement.length === 0) {
-            const duration = Math.max(0, ...plan.events.map((event) =>
-                event.start + (event.rest === "half" ? 2 : event.rest === "whole" ? 4 : event.rest === "quarter" ? 1 : 0) * (plan.noteStep ?? playbackSettings.intervalMs / 1000),
-            ));
-            const timer = setTimeout(onFinished, duration * 1000);
-            return () => clearTimeout(timer);
+            if (signal.aborted || disposed) return () => {};
+            const started = performance.now();
+            let finished = false;
+            const stop = () => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                active.delete(stop);
+                onEnded?.();
+            };
+            const timer = setTimeout(() => {
+                stop();
+                onFinished();
+            }, channelScoreDuration(plan, playbackSettings) * 1000);
+            active.add(stop);
+            onScheduled?.(() => finished ? null : (performance.now() - started) / 1000);
+            return stop;
         }
         const current = audioContext();
         try {
@@ -110,38 +136,59 @@ export function createChannelAudioEngine(settings: SoundSettings) {
         }
         if (signal.aborted || disposed) return () => {};
 
-        const origin = current.currentTime + 0.1;
+        const origin = current.currentTime + 0.01;
         const stops: Array<() => void> = [];
-        let latestVoiceEnd = Math.max(0, ...plan.events.map((event) =>
-            event.start + (event.rest === "half" ? 2 : event.rest === "whole" ? 4 : event.rest === "quarter" ? 1 : 0) * (plan.noteStep ?? playbackSettings.intervalMs / 1000),
-        ));
+        const scoreDuration = channelScoreDuration(plan, playbackSettings);
+        let latestVoiceEnd = scoreDuration;
         try {
             for (const event of arrangement) {
+                const duration = maxNoteDuration === undefined
+                    ? event.duration
+                    : Math.min(event.duration, maxNoteDuration);
                 stops.push(soundfont.start({
                     note: event.note,
                     time: origin + event.start,
-                    duration: event.duration,
+                    duration,
                     velocity: event.velocity,
                 }));
-                latestVoiceEnd = Math.max(latestVoiceEnd, event.start + event.duration + 1.5);
+                latestVoiceEnd = Math.max(latestVoiceEnd, event.start + duration);
             }
         } catch {
             stops.forEach((stop) => stop());
             throw new Error("La lecture audio a échoué.");
         }
         let finished = false;
+        let scoreNotified = false;
+        const notifyScore = () => {
+            if (scoreNotified || finished) return;
+            scoreNotified = true;
+            onFinished();
+        };
         const finish = (notify: boolean) => {
             if (finished) return;
+            if (notify) notifyScore();
             finished = true;
-            clearTimeout(timer);
+            clearTimeout(scoreTimer);
+            clearTimeout(tailTimer);
             stops.forEach((stop) => stop());
             active.delete(stop);
-            if (notify) onFinished();
+            onEnded?.();
         };
         const stop = () => finish(false);
-        const timer = setTimeout(() => finish(true),
-            Math.ceil((origin - current.currentTime + latestVoiceEnd + 0.1) * 1000));
+        const scoreTimer = setTimeout(notifyScore,
+            Math.ceil((origin - current.currentTime + scoreDuration) * 1000));
+        const tailTimer = setTimeout(() => finish(true),
+            Math.ceil((origin - current.currentTime + latestVoiceEnd + 0.05) * 1000));
         active.add(stop);
+        onScheduled?.(() => {
+            if (finished) return null;
+            const timestamp = current.getOutputTimestamp?.();
+            const outputTime = timestamp?.performanceTime !== undefined &&
+                timestamp.performanceTime > 0 && timestamp.contextTime !== undefined
+                ? timestamp.contextTime
+                : current.currentTime - (current.baseLatency ?? 0) - (current.outputLatency ?? 0);
+            return outputTime - origin;
+        });
         return stop;
     }
 
@@ -158,7 +205,11 @@ export function createChannelAudioEngine(settings: SoundSettings) {
         filter = null;
     }
 
-    return { preload, play, dispose };
+    function stopAll() {
+        for (const stop of [...active]) stop();
+    }
+
+    return { preload, prepare, play, stopAll, dispose };
 }
 
 export type ChannelAudioEngine = ReturnType<typeof createChannelAudioEngine>;

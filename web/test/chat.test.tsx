@@ -38,7 +38,11 @@ const account: Account = {
 
 beforeEach(() => {
     playback.play.mockReset();
-    playback.play.mockResolvedValue(vi.fn());
+    playback.play.mockImplementation(async (...args: unknown[]) => {
+        const onScheduled = args[4] as ((getPlayhead: () => number | null) => void) | undefined;
+        onScheduled?.(() => null);
+        return vi.fn();
+    });
     playback.preload.mockReset();
     playback.dispose.mockReset();
     emotionClassifier.classify.mockReset();
@@ -89,16 +93,17 @@ describe("Harmonie", () => {
         expect(newest).toBe(document.querySelector(".channel-sheet"));
         const staff = newest!.querySelector<HTMLButtonElement>(".channel-staff");
         expect(staff).toBeEnabled();
-        await userEvent.click(staff!);
         await waitFor(() => expect(playback.play).toHaveBeenCalledOnce());
+        await userEvent.click(staff!);
+        await waitFor(() => expect(playback.play).toHaveBeenCalledTimes(2));
         vi.spyOn(staff!, "getBoundingClientRect").mockReturnValue(
             DOMRect.fromRect({ x: 10, y: 10, width: 100, height: 40 }),
         );
         const item = staff!.closest(".channel-message")!;
         fireEvent.click(item, { clientX: 50, clientY: 30 });
-        expect(playback.play).toHaveBeenCalledTimes(2);
+        await waitFor(() => expect(playback.play).toHaveBeenCalledTimes(3));
         fireEvent.click(item, { clientX: 50, clientY: 60 });
-        expect(playback.play).toHaveBeenCalledTimes(2);
+        expect(playback.play).toHaveBeenCalledTimes(3);
     });
 
     it("plays a negative message in minor on the page tonic", async () => {
@@ -115,12 +120,15 @@ describe("Harmonie", () => {
             }],
         )));
         renderApp("/channels/5");
-        await userEvent.click(await screen.findByRole("button", { name: "Lire le message" }));
+        await screen.findByRole("button", { name: "Rejouer le message" });
         await waitFor(() => expect(playback.play).toHaveBeenCalledWith(
             expect.objectContaining({ tonicMidi: expect.any(Number) }),
             expect.objectContaining({ root: 2, mode: "minor" }),
             expect.any(Function),
             expect.any(AbortSignal),
+            expect.any(Function),
+            undefined,
+            expect.any(Function),
         ));
     });
 
@@ -138,17 +146,21 @@ describe("Harmonie", () => {
             }],
         )));
         const stop = vi.fn();
-        playback.play.mockResolvedValue(stop);
+        playback.play.mockImplementation(async (...args: unknown[]) => {
+            const onScheduled = args[4] as ((getPlayhead: () => number | null) => void) | undefined;
+            onScheduled?.(() => null);
+            return stop;
+        });
         renderApp("/channels/5");
 
-        await userEvent.click(await screen.findByRole("button", { name: "Lire le message" }));
         await screen.findByRole("button", { name: "Rejouer le message" });
-        const firstSignal = playback.play.mock.calls[0][3] as AbortSignal;
+        await userEvent.click(screen.getByRole("button", { name: "Rejouer le message" }));
+        const firstSignal = playback.play.mock.calls[1][3] as AbortSignal;
         await userEvent.click(screen.getByRole("button", { name: "Rejouer le message" }));
 
         expect(firstSignal.aborted).toBe(true);
-        expect(stop).toHaveBeenCalledOnce();
-        expect(playback.play).toHaveBeenCalledTimes(2);
+        expect(stop).toHaveBeenCalledTimes(2);
+        expect(playback.play).toHaveBeenCalledTimes(3);
     });
 
     it("keeps a staff clickable while its instrument is loading", async () => {
@@ -163,16 +175,22 @@ describe("Harmonie", () => {
                 creation_date: new Date().toISOString(),
             }],
         )));
-        let finish = (_stop: () => void) => {};
-        playback.play.mockReturnValue(new Promise<() => void>((resolve) => { finish = resolve; }));
+        let finish = () => {};
+        playback.play.mockImplementation((...args: unknown[]) => new Promise<() => void>((resolve) => {
+            finish = () => {
+                const onScheduled = args[4] as ((getPlayhead: () => number | null) => void) | undefined;
+                onScheduled?.(() => null);
+                resolve(() => {});
+            };
+        }));
         renderApp("/channels/5");
 
-        await userEvent.click(await screen.findByRole("button", { name: "Lire le message" }));
-        const loading = screen.getByRole("button", { name: "Chargement du son, réessayer" });
+        const loading = await screen.findByRole("button", { name: "Chargement du son, réessayer" });
         expect(loading).toBeEnabled();
         await userEvent.click(loading);
-        expect(playback.play).toHaveBeenCalledTimes(2);
-        finish(vi.fn());
+        await userEvent.click(loading);
+        expect(playback.play).toHaveBeenCalledTimes(3);
+        finish();
         await screen.findByRole("button", { name: "Rejouer le message" });
     });
 
@@ -325,7 +343,7 @@ describe("Harmonie", () => {
         let saved: unknown;
         mockLogin(current);
         server.use(
-            http.post(`${api}/user/edit`, async ({ request }) => {
+            http.put(`${api}/user`, async ({ request }) => {
                 saved = await request.json();
                 current.metadata = { harmonie: { instrument: "flute" } };
                 return HttpResponse.json(current);
@@ -442,7 +460,7 @@ describe("Harmonie", () => {
             await screen.findByRole("link", { name: "general" }),
         );
         await waitFor(() => expect(
-            Array.from(document.querySelectorAll(".channel-sheet[aria-hidden='false'] .emphasized-text-face"),
+            Array.from(document.querySelectorAll(".channel-sheet[aria-hidden='false'] .channel-syllable p"),
                 (node) => node.textContent).join(""),
         ).toBe("Bonjour"));
         expect(
@@ -531,13 +549,13 @@ describe("Harmonie", () => {
             await screen.findByRole("link", { name: "general" }),
         );
         await waitFor(() => expect(
-            Array.from(document.querySelectorAll(".channel-sheet[aria-hidden='false'] .emphasized-text-face"),
+            Array.from(document.querySelectorAll(".channel-sheet[aria-hidden='false'] .channel-syllable p"),
                 (node) => node.textContent).join(""),
         ).toBe("Bonjour"));
         await waitFor(() => expect(playback.preload).toHaveBeenCalledWith(["piano"]));
         expect(document.querySelectorAll(".channel-staff-lines line")).toHaveLength(10);
         await userEvent.click(
-            screen.getByRole("button", { name: "Lire le message" }),
+            screen.getByRole("button", { name: "Rejouer le message" }),
         );
         await waitFor(() => expect(playback.play).toHaveBeenCalled());
         expect(playback.play.mock.calls[0][1].instrument).toBe("piano");

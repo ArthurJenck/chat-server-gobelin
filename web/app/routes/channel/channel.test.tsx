@@ -392,7 +392,7 @@ describe("Channel page", () => {
         expect(screen.getByRole("button", { name: "Aller à la page 1 sur 5" }))
             .toHaveAttribute("aria-current", "page");
         expect(Array.from(
-            document.querySelectorAll(".channel-sheet[aria-hidden='false'] .emphasized-text-face"),
+            document.querySelectorAll(".channel-sheet[aria-hidden='false'] .channel-syllable p"),
             (node) => node.textContent,
         ).join("")).toBe("Monnouveaumessage");
     });

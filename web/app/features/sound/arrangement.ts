@@ -74,11 +74,10 @@ export function createArrangement(
     for (const index of noteIndexes) {
         const event = plan.events[index];
         const duration = noteDuration(plan, index, lastIndex, settings);
-        // const ornamentDelay =
-        //     event.endingMidi === undefined
-        //         ? 0
-        //         : Math.min(0.15, duration * 0.35);
-        const ornamentDelay = 0;
+        const ornamentDelay =
+            event.endingMidi === undefined
+                ? 0
+                : Math.min(0.15, duration * 0.35);
         add(
             event.midi!,
             event.start,

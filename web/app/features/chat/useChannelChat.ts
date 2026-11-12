@@ -22,8 +22,15 @@ import { isConversationRest, latestMusicKey, publishDueConversationRest } from "
 import { emotionCacheKey, readCachedEmotion, writeCachedEmotion } from "./emotionCache";
 import { classifyEmotion } from "./emotionClient";
 import { messageEmotion, type Emotion } from "./emotion";
+import { messageIdentity } from "./channelScore";
 
 const AVAILABLE_KEY: KeyState = { holderId: null, holderName: null };
+
+export type MessageArrival = {
+    sequence: number;
+    source: "poll" | "sent";
+    ids: string[];
+};
 
 export function useChannelChat(id: number, account: Account | null) {
     const navigate = useNavigate();
@@ -41,13 +48,22 @@ export function useChannelChat(id: number, account: Account | null) {
     const [loading, setLoading] = useState(true);
     const [content, setContent] = useState("");
     const [busy, setBusy] = useState(false);
-    const [sentMessageCount, setSentMessageCount] = useState(0);
+    const [arrival, setArrival] = useState<MessageArrival | null>(null);
     const [classifying, setClassifying] = useState(false);
     const [keyBusy, setKeyBusy] = useState(false);
     const [error, setError] = useState("");
     const [localEmotions, setLocalEmotions] = useState<Record<string, Emotion>>({});
     const pendingEmotions = useRef(new Set<string>());
     const failedEmotions = useRef(new Set<string>());
+    const knownMessages = useRef<Set<string> | null>(null);
+    const sentIds = useRef(new Set<string>());
+    const arrivalSequence = useRef(0);
+
+    useEffect(() => {
+        knownMessages.current = null;
+        sentIds.current.clear();
+        setArrival(null);
+    }, [id]);
     const setVisibleMessages = useCallback((pageMessages: Message[]) => {
         setVisiblePage({ channelId: id, messages: pageMessages });
     }, [id]);
@@ -102,18 +118,27 @@ export function useChannelChat(id: number, account: Account | null) {
     }
 
     const refresh = useCallback(
-        async (technicalId: number | null) => {
+        async (technicalId: number | null, source: "initial" | "poll" | "sent" = "poll") => {
             const [nextMessages, nextKey] = await Promise.all([
                 getMessages(id),
                 technicalId === null
                     ? Promise.resolve(AVAILABLE_KEY)
                     : readKeyState(technicalId),
             ]);
-            setMessages(
-                nextMessages.filter(
-                    (message) => !message.content.includes("clock tick"),
-                ),
-            );
+            const filtered = nextMessages.filter((message) => !message.content.includes("clock tick"));
+            const previous = knownMessages.current;
+            const identities = new Set(filtered.map(messageIdentity));
+            knownMessages.current = identities;
+            setMessages((current) => JSON.stringify(current) === JSON.stringify(filtered)
+                ? current
+                : filtered);
+            if (source === "poll" && previous) {
+                const ids = filtered.map(messageIdentity).filter((identity) =>
+                    !previous.has(identity) && !sentIds.current.has(identity),
+                );
+                if (ids.length)
+                    setArrival({ sequence: ++arrivalSequence.current, source: "poll", ids });
+            }
             setKeyState(nextKey);
         },
         [id],
@@ -129,12 +154,12 @@ export function useChannelChat(id: number, account: Account | null) {
             const technicalId = hasKey ? (await ensureKeyChannel(account)).id : null;
             if (!active) return;
             setKeyChannelId(technicalId);
-            await refresh(technicalId);
+            await refresh(technicalId, "initial");
             if (active) {
                 setLoading(false);
                 timer = setInterval(() => {
                     if (document.visibilityState === "visible")
-                        void refresh(technicalId).catch((cause: unknown) =>
+                        void refresh(technicalId, "poll").catch((cause: unknown) =>
                             handleError(cause, "Actualisation impossible."),
                         );
                 }, MESSAGE_REFRESH_MS);
@@ -164,15 +189,17 @@ export function useChannelChat(id: number, account: Account | null) {
             setClassifying(false);
             await publishDueConversationRest(id).catch(() => false);
             const key = latestMusicKey(await getMessages(id));
-            await sendMessage(id, text, {
+            const sent = await sendMessage(id, text, {
                 instrument,
                 music_root: key.root,
                 music_mode: key.mode,
                 emotion,
             });
+            const sentIdentity = messageIdentity(sent);
+            sentIds.current.add(sentIdentity);
             setContent("");
-            await refresh(keyChannelId);
-            setSentMessageCount((count) => count + 1);
+            await refresh(keyChannelId, "sent");
+            setArrival({ sequence: ++arrivalSequence.current, source: "sent", ids: [sentIdentity] });
         } catch (cause) {
             handleError(cause, "Envoi impossible.");
         } finally {
@@ -205,7 +232,7 @@ export function useChannelChat(id: number, account: Account | null) {
         content,
         setContent,
         busy,
-        sentMessageCount,
+        arrival,
         classifying,
         keyBusy,
         error,

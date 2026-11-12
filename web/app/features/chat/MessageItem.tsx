@@ -1,92 +1,61 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import EmphasizedText from "../../components/EmphasizedText";
-import type { ChannelAudioEngine } from "../sound/channelAudioEngine";
-import { withInstrumentProfile } from "../sound/soundConfig";
-import {
-    CHANNEL_SOUND_SETTINGS,
-    type ChannelStaffBlock,
-} from "./channelPagination";
-import { messageInstrument } from "./messageSound";
+import { useEffect, useRef } from "react";
+import gsap from "gsap";
+import type { ChannelStaffBlock } from "./channelPagination";
 import { isConversationRest, musicColor } from "./conversationMusic";
+import type { ChannelVisual } from "./useChannelPlayback";
 
 export default function MessageItem({
     block,
     isOwn,
-    audio,
+    onPlay,
+    visual,
+    loading,
+    error,
 }: {
     block: ChannelStaffBlock;
     isOwn: boolean;
-    audio: ChannelAudioEngine;
+    onPlay: (block: ChannelStaffBlock) => void;
+    visual: ChannelVisual | null;
+    loading: boolean;
+    error: string;
 }) {
     const { message, plan, row, first } = block;
     const silent = isConversationRest(message);
-    const settings = useMemo(
-        () =>
-            withInstrumentProfile(
-                {
-                    ...CHANNEL_SOUND_SETTINGS,
-                    ...block.pageKey,
-                    mode: block.mode,
-                },
-                messageInstrument(message),
-            ),
-        [message, block.pageKey, block.mode],
-    );
-    const [playing, setPlaying] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const stopRef = useRef<(() => void) | null>(null);
-    const controllerRef = useRef<AbortController | null>(null);
-    const playId = useRef(0);
+    const nodes = useRef(new Map<number, HTMLSpanElement>());
+    const playing = Boolean(visual?.blockKeys.includes(block.key));
 
-    useEffect(
-        () => () => {
-            playId.current += 1;
-            controllerRef.current?.abort();
-            stopRef.current?.();
-        },
-        [],
-    );
-
-    async function togglePlayback() {
-        controllerRef.current?.abort();
-        stopRef.current?.();
-        stopRef.current = null;
-        const controller = new AbortController();
-        controllerRef.current = controller;
-        const id = ++playId.current;
-        setLoading(true);
-        setPlaying(false);
-        setError("");
-        try {
-            const stop = await audio.play(
-                plan,
-                settings,
-                () => {
-                    if (playId.current === id) {
-                        stopRef.current = null;
-                        setPlaying(false);
-                    }
-                },
-                controller.signal,
+    useEffect(() => {
+        if (!playing || !visual) return;
+        const animationSettings = visual.settings;
+        const timeline = gsap.timeline({ paused: true });
+        const animated: HTMLSpanElement[] = [];
+        for (const group of row) {
+            const start = visual.eventStarts[group.eventIndex];
+            const node = nodes.current.get(group.eventIndex);
+            if (start === undefined || !node) continue;
+            animated.push(node);
+            gsap.set(node, { y: -animationSettings.visualRise, opacity: 0 });
+            timeline.fromTo(node,
+                { y: -animationSettings.visualRise, opacity: 0 },
+                { y: 0, opacity: 1, duration: animationSettings.visualDuration, ease: animationSettings.visualEase },
+                start,
             );
-            if (playId.current === id) {
-                stopRef.current = stop;
-                setLoading(false);
-                setPlaying(true);
-            } else stop();
-        } catch (cause) {
-            if (playId.current === id) {
-                setLoading(false);
-                setPlaying(false);
-                setError(
-                    cause instanceof Error
-                        ? cause.message
-                        : "Lecture impossible.",
-                );
-            }
         }
-    }
+        let frame = 0;
+        const update = () => {
+            const playhead = visual.getPlayhead();
+            if (playhead === null) return;
+            const time = Math.max(0, playhead - animationSettings.visualDelayMs / 1000);
+            timeline.time(time);
+            if (time < timeline.duration()) frame = requestAnimationFrame(update);
+        };
+        update();
+        return () => {
+            cancelAnimationFrame(frame);
+            timeline.kill();
+            gsap.set(animated, { y: 0, opacity: 1 });
+        };
+    }, [playing, visual]);
 
     return (
         <li
@@ -127,7 +96,7 @@ export default function MessageItem({
                     )
                 }
                 onPointerDown={(event) => event.currentTarget.setPointerCapture?.(event.pointerId)}
-                onClick={() => void togglePlayback()}
+                onClick={() => onPlay(block)}
             >
                 <svg
                     className="channel-staff-lines"
@@ -154,6 +123,10 @@ export default function MessageItem({
                 {row.map((group) => (
                     <span
                         key={group.eventIndex}
+                        ref={(node) => {
+                            if (node) nodes.current.set(group.eventIndex, node);
+                            else nodes.current.delete(group.eventIndex);
+                        }}
                         className={
                             group.rest
                                 ? "channel-syllable channel-rest"

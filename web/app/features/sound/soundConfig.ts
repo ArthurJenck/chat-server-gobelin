@@ -463,7 +463,7 @@ export const SOUND_RANGES = {
     gate: { min: 0.05, max: 1, step: 0.01 },
     filterFrequency: { min: 100, max: 12000, step: 50 },
     resonance: { min: 0.1, max: 20, step: 0.1 },
-    volume: { min: 0, max: 0.6, step: 0.01 },
+    volume: { min: 0, max: 1, step: 0.01 },
     echoDelay: { min: 0.05, max: 1, step: 0.01 },
     echoFeedback: { min: 0, max: 0.75, step: 0.01 },
     echoMix: { min: 0, max: 0.8, step: 0.01 },

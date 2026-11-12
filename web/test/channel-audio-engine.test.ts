@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createChannelAudioEngine } from "../app/features/sound/channelAudioEngine";
 import { DEFAULT_SOUND_SETTINGS } from "../app/features/sound/soundConfig";
+import { glissandoPerformance } from "../app/features/chat/channelScore";
 import type { SoundPlan } from "../app/features/sound/soundPlan";
 
 const sampler = vi.hoisted(() => ({
@@ -54,8 +55,88 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+});
+
+it("waits through a whole rest and provides its visual playhead", async () => {
+    vi.useFakeTimers();
+    const audio = createChannelAudioEngine(DEFAULT_SOUND_SETTINGS);
+    const rest: SoundPlan = {
+        events: [{ text: "", wordId: null, start: 0, midi: null, rest: "whole" }],
+        tonicMidi: 60,
+        density: 0,
+        noteStep: 0.24,
+    };
+    const finished = vi.fn();
+    const scheduled = vi.fn();
+
+    await audio.play(rest, DEFAULT_SOUND_SETTINGS, finished, new AbortController().signal, scheduled);
+    expect(scheduled).toHaveBeenCalledOnce();
+    const getPlayhead = scheduled.mock.calls[0][0] as () => number | null;
+    await vi.advanceTimersByTimeAsync(959);
+    expect(getPlayhead()).toBeCloseTo(0.959);
+    expect(finished).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(finished).toHaveBeenCalledOnce();
+    expect(getPlayhead()).toBeNull();
+    audio.dispose();
+});
+
+it("caps every piano glissando note to a short strike", async () => {
+    const audio = createChannelAudioEngine(DEFAULT_SOUND_SETTINGS);
+    const gliss = glissandoPerformance("newer");
+    const stop = await audio.play(gliss.plan, gliss.settings, vi.fn(),
+        new AbortController().signal, undefined, gliss.maxNoteDuration);
+
+    expect(sampler.start).toHaveBeenCalledTimes(25);
+    expect(sampler.start.mock.calls.every(([event]) => event.duration <= 0.04)).toBe(true);
+    stop();
+    audio.dispose();
+});
+
+it("starts the next score at the musical boundary while the last note still rings", async () => {
+    vi.useFakeTimers();
+    const audio = createChannelAudioEngine(DEFAULT_SOUND_SETTINGS);
+    const shortPlan: SoundPlan = { ...plan, noteStep: 0.24 };
+    const firstFinished = vi.fn();
+    const secondFinished = vi.fn();
+
+    await audio.play(shortPlan, DEFAULT_SOUND_SETTINGS, firstFinished, new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(249);
+    expect(firstFinished).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(firstFinished).toHaveBeenCalledOnce();
+    expect(sampler.stopVoice).not.toHaveBeenCalled();
+
+    await audio.play(shortPlan, DEFAULT_SOUND_SETTINGS, secondFinished, new AbortController().signal);
+    expect(sampler.start).toHaveBeenCalledTimes(2);
+    expect(sampler.stopVoice).not.toHaveBeenCalled();
+    audio.stopAll();
+    expect(sampler.stopVoice).toHaveBeenCalledTimes(2);
+    audio.dispose();
+});
+
+it("delays the next score by the written quarter rest", async () => {
+    vi.useFakeTimers();
+    const audio = createChannelAudioEngine(DEFAULT_SOUND_SETTINGS);
+    const withRest: SoundPlan = {
+        ...plan,
+        noteStep: 0.24,
+        events: [
+            plan.events[0],
+            { text: ",", wordId: null, start: 0.24, midi: null, rest: "quarter" },
+        ],
+    };
+    const finished = vi.fn();
+
+    await audio.play(withRest, DEFAULT_SOUND_SETTINGS, finished, new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(489);
+    expect(finished).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(finished).toHaveBeenCalledOnce();
+    audio.dispose();
 });
 
 it("preloads only visible instruments and lets a click load another instrument immediately", async () => {

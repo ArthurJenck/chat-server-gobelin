@@ -32,7 +32,7 @@ export default function ChannelPage() {
         content,
         setContent,
         busy,
-        sentMessageCount,
+        arrival,
         classifying,
         keyBusy,
         error,
@@ -153,7 +153,7 @@ export default function ChannelPage() {
                     userId={account?.id ?? null}
                     audio={audioState.engine}
                     preloadEnabled={Boolean(channel && !loading)}
-                    sentMessageCount={sentMessageCount}
+                    arrival={arrival}
                     onKeyChange={setActiveMusicKey}
                     onVisibleMessagesChange={setVisibleMessages}
                 />

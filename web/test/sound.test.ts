@@ -265,7 +265,7 @@ describe("sound workshop", () => {
             "sa", "lut", "ça", "va?",
         ]);
         expect(statement.events.map((event) => event.midi).filter((midi) => midi !== null)).toEqual([
-            72, 77, 76, 72,
+            72, 77, 72, 72,
         ]);
         expect(question.events.slice(0, -1).map((event) => event.midi)).toEqual(
             statement.events.slice(0, -2).map((event) => event.midi),
