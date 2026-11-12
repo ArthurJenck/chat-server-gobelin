@@ -111,6 +111,56 @@ func (h userHandler) Login(writer http.ResponseWriter, request *http.Request) {
 	log.Printf("Generated JWT Token: %s", tokenString)
 }
 
+
+func (h userHandler) GetAll(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+
+	users, err := h.userRepo.GetAll(ctx)
+	if err != nil {
+		log.Printf("Error retrieving users: %s", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	namespace := internal.GetNamespace(ctx)
+
+	presentations := make([]UserPresentation, 0, len(users))
+	for _, user := range users {
+		presentation := UserPresentation{
+			Username: user.Username,
+			ID: user.ID,
+		}
+		if user.Metadata != nil {
+			meta := user.Metadata
+
+			if namespace != "" {
+				meta = make(map[string]json.RawMessage)
+				if namespaced, ok := user.Metadata[namespace]; ok {
+					meta[namespace] = namespaced
+				}
+			}
+			rawMeta, err := json.Marshal(meta)
+			if err != nil {
+				log.Printf("Error namespacing metadatas: %s", err.Error())
+				writer.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			jsonMeta := json.RawMessage(rawMeta)
+			presentation.Metadata = &jsonMeta
+		}
+		presentations = append(presentations, presentation)
+	}
+
+	result, err := json.Marshal(presentations)
+	if err != nil {
+		log.Printf("Error marshaling value: %s", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
+	writer.Write(result)
+}
+
 func (h userHandler) Me(writer http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 

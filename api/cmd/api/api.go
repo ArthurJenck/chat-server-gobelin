@@ -125,6 +125,7 @@ func main() {
 	router.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
 	router.HandleFunc("/user", userHandler.Create).Methods(http.MethodPost)
 	router.HandleFunc("/user", userHandler.Edit).Methods(http.MethodPut)
+	router.HandleFunc("/user", userHandler.GetAll).Methods(http.MethodGet)
 	router.HandleFunc("/me", userHandler.Me).Methods(http.MethodGet)
 	router.HandleFunc("/channel/socket", channelHandler.ServeWS).Methods(http.MethodGet)
 	/*router.HandleFunc("/channel", channelHandler.Get).Methods(http.MethodGet)*/

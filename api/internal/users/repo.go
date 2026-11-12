@@ -15,6 +15,7 @@ type Repo interface {
 	Create(ctx context.Context, name string, metadata json.RawMessage, passwordHash []byte) (*User, error)
 	EditMetadata(ctx context.Context, user User, rawMetadata json.RawMessage) (*User, error)
 	GetByIDs(ctx context.Context, userIDs []int64) ([]User, error)
+	GetAll(ctx context.Context) ([]User, error)
 }
 
 type repo struct {
@@ -102,6 +103,24 @@ func (r *repo) GetByIDs(ctx context.Context, userIDs []int64) ([]User, error) {
 
 	var users []User
 	err = r.db.SelectContext(ctx, &users, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("Error retrieving users: %w", err)
+	}
+
+	return users, nil
+}
+
+func (r *repo) GetAll(ctx context.Context) ([]User, error) {
+	//We don't retrieve balance nor passwords (or hashes) when retrieving multiple users
+	query := `SELECT
+			id,
+			username,
+			metadata
+		FROM users`
+	query = r.db.Rebind(query)
+
+	var users []User
+	err := r.db.SelectContext(ctx, &users, query)
 	if err != nil {
 		return nil, fmt.Errorf("Error retrieving users: %w", err)
 	}
