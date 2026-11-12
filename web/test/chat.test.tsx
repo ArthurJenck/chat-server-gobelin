@@ -393,31 +393,33 @@ describe("Harmonie", () => {
         ).toBeInTheDocument();
     });
 
-    it("joins an existing group from the common form", async () => {
-        mockLogin();
+    it("joins an existing group from the join form", async () => {
+        const current = { ...account, channels: [...(account.channels ?? [])] };
+        mockLogin(current);
         let joined: unknown;
         server.use(
-            http.post(
-                `${api}/channel`,
-                () => new HttpResponse(null, { status: 500 }),
-            ),
+            http.post(`${api}/channel`, () => new HttpResponse(null, { status: 500 })),
             http.post(`${api}/channel/enter`, async ({ request }) => {
                 joined = await request.json();
-                return HttpResponse.json({
+                const channel = {
                     id: 7,
                     name: "studio",
                     creation_date: new Date().toISOString(),
-                });
+                };
+                current.channels.push(channel);
+                return HttpResponse.json(channel);
             }),
+            http.get(`${api}/channel/message`, () => HttpResponse.json([])),
         );
         renderApp("/login");
         await signIn();
         await userEvent.click(
             await screen.findByRole("link", { name: "Ajouter un groupe" }),
         );
-        await userEvent.type(screen.getByLabelText("Nom du groupe"), "studio");
+        await userEvent.click(screen.getByRole("button", { name: "Rejoindre" }));
+        await userEvent.type(screen.getByLabelText("Nom de l’orchestre :"), "studio");
         await userEvent.click(
-            screen.getByRole("button", { name: "Rejoindre / Créer" }),
+            screen.getByRole("button", { name: "Rejoindre" }),
         );
         expect(joined).toEqual({ channel: "studio" });
     });

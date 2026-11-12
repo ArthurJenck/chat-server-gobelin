@@ -16,7 +16,8 @@ export default [
     route("profil", "routes/profile/index.tsx"),
     route("profil/instrument", "routes/instrument.tsx"),
     route("profil/confirmation", "routes/confirmation/index.tsx"),
-    route("groupes/nouveau", "routes/new-channel.tsx"),
+    route("groupes/nouveau", "routes/new-channel/index.tsx"),
+    route("groupes/nouveau/:action", "routes/new-channel/index.tsx", { id: "routes/new-channel/form" }),
     route("channels/:channelId", "routes/channel/index.tsx"),
     route("atelier-son", "routes/sound-lab.tsx"),
 ] satisfies RouteConfig;

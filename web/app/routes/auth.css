@@ -46,3 +46,9 @@
     text-decoration: none;
 }
 
+.form-error {
+    color: var(--color-key-do-minor);
+    font-size: 16px;
+    line-height: 20px;
+}
+

@@ -322,6 +322,23 @@ describe("Channel page", () => {
         expect(screen.getByRole("button", { name: "Aller à la page 8 sur 8" })).toBeInTheDocument();
     });
 
+    it("updates the number in the active dot while a page is turning", async () => {
+        messageAreaHeight = 120;
+        mockChannel(Array.from({ length: 8 }, (_, index) => message(index + 1, `Message ${index + 1}`)));
+        renderApp("/channels/5");
+
+        await waitFor(() => expect(document.querySelectorAll(".channel-sheet")).toHaveLength(8));
+        const scroller = screen.getByRole("region", { name: "Messages" });
+        const pagination = screen.getByRole("navigation", { name: "Pages des messages" });
+        expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("1");
+
+        scroller.scrollLeft = 6.4 * 360;
+        fireEvent.scroll(scroller);
+
+        expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("2");
+        expect(scroller.scrollLeft).toBe(6.4 * 360);
+    });
+
     it("forwards a click through a turned sheet to its visible staff", async () => {
         messageAreaHeight = 120;
         mockChannel([message(1, "Ancien"), message(2, "Deuxième"), message(3, "Troisième")]);

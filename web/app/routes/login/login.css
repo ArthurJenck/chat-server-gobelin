@@ -9,6 +9,4 @@
 
 .login-page .auth-content > [role="alert"] {
     top: calc(50px + var(--auth-content-gap) - 60px);
-    color: var(--color-key-do-minor);
-    line-height: 20px;
 }

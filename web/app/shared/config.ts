@@ -11,5 +11,7 @@ export const PATHS = {
     instrument: "/profil/instrument",
     confirmation: "/profil/confirmation",
     newChannel: "/groupes/nouveau",
+    joinChannel: "/groupes/nouveau/rejoindre",
+    createChannel: "/groupes/nouveau/creer",
     channel: (id: number) => `/channels/${id}`,
 } as const;

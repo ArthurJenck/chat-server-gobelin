@@ -11,6 +11,7 @@ import { messageInstrument } from "../../features/chat/messageSound";
 import { glissandoPerformance, messagePerformance, pagePerformances } from "../../features/chat/channelScore";
 import { useChannelPlayback } from "../../features/chat/useChannelPlayback";
 import type { MessageArrival } from "../../features/chat/useChannelChat";
+import ChannelPagination from "./ChannelPagination";
 
 export default function ChannelPages({
     messages,
@@ -48,12 +49,6 @@ export default function ChannelPages({
     const pages = useMemo(() => applyPageMusicKeys(
         paginateChannelStaffs(blocks, size.height), size.width,
     ), [blocks, size.height, size.width]);
-    const firstVisiblePage = Math.max(0, Math.min(activePage - 2, pages.length - 5));
-    const visiblePageCount = Math.min(5, pages.length);
-    const visiblePages = Array.from(
-        { length: visiblePageCount },
-        (_, index) => firstVisiblePage + visiblePageCount - 1 - index,
-    );
 
     const finishNavigation = () => {
         if (settleTimer.current) clearTimeout(settleTimer.current);
@@ -393,20 +388,11 @@ export default function ChannelPages({
                     </div>
                 </div>
             </section>
-            {pages.length > 1 && (
-                <nav className="channel-pagination" aria-label="Pages des messages">
-                    {visiblePages.map((targetPage) => (
-                        <button
-                            key={targetPage}
-                            type="button"
-                            className="channel-page-dot"
-                            aria-label={`Aller à la page ${targetPage + 1} sur ${pages.length}`}
-                            aria-current={targetPage === activePage ? "page" : undefined}
-                            onClick={() => goToPage(targetPage)}
-                        />
-                    ))}
-                </nav>
-            )}
+            <ChannelPagination
+                activePage={activePage}
+                pageCount={pages.length}
+                onPageSelect={goToPage}
+            />
         </>
     );
 }

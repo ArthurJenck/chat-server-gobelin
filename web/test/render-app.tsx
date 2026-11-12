@@ -11,7 +11,7 @@ import SoundLab from "../app/routes/sound-lab";
 import Profile from "../app/routes/profile/index";
 import InstrumentPage from "../app/routes/instrument";
 import Confirmation from "../app/routes/confirmation";
-import NewChannel from "../app/routes/new-channel";
+import NewChannel from "../app/routes/new-channel/index";
 import Guest from "../app/routes/guest";
 
 export function renderApp(path: string | string[] = "/") {
@@ -34,6 +34,7 @@ export function renderApp(path: string | string[] = "/") {
                     { path: "/profil/instrument", element: <InstrumentPage /> },
                     { path: "/profil/confirmation", element: <Confirmation /> },
                     { path: "/groupes/nouveau", element: <NewChannel /> },
+                    { path: "/groupes/nouveau/:action", element: <NewChannel /> },
                     { path: "/channels/:channelId", element: <ChannelPage /> },
                     { path: "/atelier-son", element: <SoundLab /> },
                 ],

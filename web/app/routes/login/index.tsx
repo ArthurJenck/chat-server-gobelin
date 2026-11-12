@@ -40,7 +40,7 @@ export default function Login() {
             <div className="auth-content">
                 <h1>Se connecter</h1>
                 {error && (
-                    <p id="login-error" role="alert">
+                    <p id="login-error" className="form-error" role="alert">
                         {error}
                     </p>
                 )}
