@@ -384,7 +384,7 @@ describe("Harmonie", () => {
             screen.queryByRole("button", { name: /modifier.*utilisateur/i }),
         ).not.toBeInTheDocument();
         await userEvent.click(
-            screen.getByRole("button", { name: "Se déconnecter" }),
+            screen.getByRole("button", { name: "Me déconnecter" }),
         );
         expect(
             await screen.findByRole("heading", {

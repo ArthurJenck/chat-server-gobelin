@@ -13,7 +13,7 @@ export default [
         route("forgot-password", "routes/forgot-password/index.tsx"),
         route("register", "routes/register/index.tsx"),
     ]),
-    route("profil", "routes/profile.tsx"),
+    route("profil", "routes/profile/index.tsx"),
     route("profil/instrument", "routes/instrument.tsx"),
     route("profil/confirmation", "routes/confirmation/index.tsx"),
     route("groupes/nouveau", "routes/new-channel.tsx"),

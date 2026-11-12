@@ -8,7 +8,7 @@ import ForgotPassword from "../app/routes/forgot-password/index";
 import Welcome from "../app/routes/welcome";
 import Register from "../app/routes/register/index";
 import SoundLab from "../app/routes/sound-lab";
-import Profile from "../app/routes/profile";
+import Profile from "../app/routes/profile/index";
 import InstrumentPage from "../app/routes/instrument";
 import Confirmation from "../app/routes/confirmation";
 import NewChannel from "../app/routes/new-channel";
