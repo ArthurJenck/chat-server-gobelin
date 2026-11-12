@@ -65,7 +65,7 @@ describe("Confirmation page", () => {
 
         const { router } = renderApp("/profil/confirmation");
         await waitFor(() => expect(router.state.location.pathname).toBe("/"));
-        expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: "Mes partitions" })).toBeInTheDocument();
     });
 
     it("shows the confirmation design on the profile and saves an instrument after validation", async () => {
@@ -168,7 +168,7 @@ describe("Confirmation page", () => {
         await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
 
         await waitFor(() => expect(saved).toEqual({ metadata: { instrument: "harp" } }));
-        expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: "Mes partitions" })).toBeInTheDocument();
     });
 
     it("shows the account error instead of an incomplete confirmation", async () => {

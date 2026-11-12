@@ -362,7 +362,7 @@ describe("Harmonie", () => {
         expect(saved).toBeUndefined();
         await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
         expect(
-            await screen.findByRole("heading", { name: "Mes groupes" }),
+            await screen.findByRole("heading", { name: "Mes partitions" }),
         ).toBeInTheDocument();
         expect(saved).toEqual({ metadata: { instrument: "flute" } });
     });

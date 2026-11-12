@@ -78,14 +78,14 @@ describe("Register page", () => {
 
         await waitFor(() => expect(getToken()).toBe("register-token"));
         expect(submitted).toEqual({ username: "Alice", password: "secret", metadata: { instrument: "harp" } });
-        expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: "Mes partitions" })).toBeInTheDocument();
 
         await router.navigate(-1);
         await waitFor(() => expect(router.state.location.pathname).toBe("/"));
-        expect(screen.getByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Mes partitions" })).toBeInTheDocument();
 
         await router.navigate(-1);
         await waitFor(() => expect(router.state.location.pathname).toBe("/"));
-        expect(screen.getByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Mes partitions" })).toBeInTheDocument();
     });
 });

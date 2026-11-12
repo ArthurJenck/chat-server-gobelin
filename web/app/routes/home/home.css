@@ -1,0 +1,207 @@
+.home-page {
+    box-sizing: border-box;
+    display: flex;
+    height: 100svh;
+    min-height: 0;
+    flex-direction: column;
+    margin: -8px;
+    padding: 60px 20px 0;
+    overflow: hidden;
+}
+
+.home-actions {
+    display: flex;
+    height: 40px;
+    flex: none;
+    align-self: flex-end;
+    gap: 10px;
+}
+
+.home-actions a {
+    position: relative;
+    box-sizing: border-box;
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 50%;
+}
+
+.home-actions a:focus-visible,
+.home-notebook-link:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+}
+
+.home-profile {
+    border: 0.4px dotted var(--color-ink);
+}
+
+.home-profile img {
+    display: block;
+    width: 26px;
+    height: 39px;
+}
+
+.home-add {
+    border: 1px solid var(--color-background);
+    background: rgb(0 0 0 / 60%);
+}
+
+.home-add-icon {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: var(--color-background);
+    mask: url("/pictos/plus.svg") center / contain no-repeat;
+}
+
+.home-add-icon-blur {
+    filter: blur(4px);
+}
+
+.home-title {
+    flex: none;
+    margin: 10px 0 30px;
+    font-size: 44px;
+    line-height: 40px;
+}
+
+.home-notebooks {
+    position: relative;
+    min-height: 0;
+    flex: 1;
+    margin: 0 -20px;
+}
+
+.home-notebooks::before,
+.home-notebooks::after {
+    position: absolute;
+    right: 0;
+    left: 0;
+    height: 100px;
+    content: "";
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.home-notebooks::before {
+    top: 0;
+    background: linear-gradient(var(--color-background), transparent);
+}
+
+.home-notebooks::after {
+    bottom: 0;
+    background: linear-gradient(transparent, var(--color-background));
+}
+
+.home-notebooks--fade-top::before,
+.home-notebooks--fade-bottom::after {
+    opacity: 1;
+}
+
+.home-notebooks-scroll {
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.home-notebooks-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.home-scroll-indicator {
+    position: absolute;
+    right: 10px;
+    width: 2px;
+    height: 40px;
+    background: repeating-linear-gradient(
+        to bottom,
+        #4f4f4f 0 2px,
+        transparent 2px 4px
+    );
+    pointer-events: none;
+    z-index: 2;
+}
+
+.home-notebooks-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.home-notebook {
+    position: relative;
+    width: min(329px, calc(100% - 40px));
+    aspect-ratio: 329 / 436;
+    margin-inline: auto;
+    transition: transform 220ms ease;
+}
+
+.home-notebook + .home-notebook {
+    margin-top: calc(min(329px, calc(100vw - 40px)) * -345 / 329);
+}
+
+.home-notebook--dark {
+    --notebook-cover: #181818;
+}
+
+.home-notebook--medium {
+    --notebook-cover: #4f4f4f;
+}
+
+.home-notebook--light {
+    --notebook-cover: #7a7a7a;
+}
+
+.home-notebook-link {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+}
+
+.home-notebook-art,
+.home-notebook-art svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.home-notebook-group {
+    position: absolute;
+    top: 32.55%;
+    left: 29.74%;
+    display: block;
+    width: 45.59%;
+    height: auto;
+}
+
+.home-notebook-name {
+    position: absolute;
+    top: 8.5%;
+    right: 7%;
+    left: 7%;
+    overflow: hidden;
+    color: var(--color-background);
+    font-size: 20px;
+    line-height: 25px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .home-notebook:hover ~ .home-notebook,
+    .home-notebook:focus-within ~ .home-notebook {
+        transform: translateY(20px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-notebook {
+        transition: none;
+    }
+}

@@ -30,7 +30,7 @@ describe("Guest pages", () => {
             const { router } = renderApp(path);
 
             await waitFor(() => expect(router.state.location.pathname).toBe("/"));
-            expect(screen.getByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+            expect(await screen.findByRole("heading", { name: "Mes partitions" })).toBeInTheDocument();
         },
     );
 

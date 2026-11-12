@@ -224,7 +224,7 @@ describe("Channel page", () => {
         expect(document.querySelectorAll(".channel-staff-coda")).toHaveLength(4);
         expect(screen.queryByRole("checkbox", { name: "Clé récupérée" })).not.toBeInTheDocument();
         await userEvent.click(screen.getByRole("link", { name: "Retour aux channels" }));
-        expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: "Mes partitions" })).toBeInTheDocument();
     });
 
     it("shows an anonymous whole rest without an author or playback", async () => {
