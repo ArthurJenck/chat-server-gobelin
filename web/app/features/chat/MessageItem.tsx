@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import EmphasizedText from "../../components/EmphasizedText";
-import { startPlayback } from "../sound/audioEngine";
+import type { ChannelAudioEngine } from "../sound/channelAudioEngine";
 import { withInstrumentProfile } from "../sound/soundConfig";
 import { CHANNEL_SOUND_SETTINGS, type ChannelStaffBlock } from "./channelPagination";
 import { messageInstrument } from "./messageSound";
@@ -9,9 +9,11 @@ import { isConversationRest, musicColor } from "./conversationMusic";
 export default function MessageItem({
     block,
     isOwn,
+    audio,
 }: {
     block: ChannelStaffBlock;
     isOwn: boolean;
+    audio: ChannelAudioEngine;
 }) {
     const { message, plan, row, first } = block;
     const silent = isConversationRest(message);
@@ -22,34 +24,34 @@ export default function MessageItem({
     const [playing, setPlaying] = useState(false);
     const [error, setError] = useState("");
     const stopRef = useRef<(() => void) | null>(null);
+    const controllerRef = useRef<AbortController | null>(null);
     const playId = useRef(0);
 
     useEffect(
         () => () => {
             playId.current += 1;
+            controllerRef.current?.abort();
             stopRef.current?.();
         },
         [],
     );
 
     async function togglePlayback() {
-        if (playing) {
-            playId.current += 1;
-            stopRef.current?.();
-            stopRef.current = null;
-            setPlaying(false);
-            return;
-        }
+        controllerRef.current?.abort();
+        stopRef.current?.();
+        stopRef.current = null;
+        const controller = new AbortController();
+        controllerRef.current = controller;
         const id = ++playId.current;
         setPlaying(true);
         setError("");
         try {
-            const stop = await startPlayback(plan, settings, () => {
+            const stop = await audio.play(plan, settings, () => {
                 if (playId.current === id) {
                     stopRef.current = null;
                     setPlaying(false);
                 }
-            });
+            }, controller.signal);
             if (playId.current === id) stopRef.current = stop;
             else stop();
         } catch (cause) {
@@ -74,7 +76,7 @@ export default function MessageItem({
             <button
                 className="channel-staff"
                 type="button"
-                aria-label={silent ? "Pause" : playing ? "Arrêter la lecture" : "Lire le message"}
+                aria-label={silent ? "Pause" : playing ? "Rejouer le message" : "Lire le message"}
                 disabled={silent || !plan.events.some((event) => event.midi !== null || event.rest)}
                 onClick={() => void togglePlayback()}
             >

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import DottedButton from "../components/DottedButton";
 import InstrumentList from "../components/InstrumentList";
@@ -14,6 +14,7 @@ export default function InstrumentPage() {
     const { registration, selectedInstrument, setSelectedInstrument } = useRegistration();
     const { account, loading, error: accountError } = useAccount(false, false);
     const initial = account && accountInstrument(account);
+    const enteredWithSelection = useRef(Boolean(selectedInstrument));
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
 
@@ -22,8 +23,9 @@ export default function InstrumentPage() {
     }, [navigate, registration]);
 
     useEffect(() => {
-        if (initial && !selectedInstrument) setSelectedInstrument(initial);
-    }, [initial, selectedInstrument, setSelectedInstrument]);
+        if (initial && !selectedInstrument && !registration && !enteredWithSelection.current)
+            void navigate(PATHS.home, { replace: true });
+    }, [initial, navigate, registration, selectedInstrument]);
 
     async function submit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();

@@ -8,10 +8,10 @@ import { keyStateFromMessages } from "../app/features/key/keyState";
 import { renderApp } from "./render-app";
 import { server } from "./setup";
 
-const playback = vi.hoisted(() => ({ start: vi.fn() }));
+const playback = vi.hoisted(() => ({ play: vi.fn(), preload: vi.fn(), dispose: vi.fn() }));
 const emotionClassifier = vi.hoisted(() => ({ classify: vi.fn() }));
-vi.mock("../app/features/sound/audioEngine", () => ({
-    startPlayback: playback.start,
+vi.mock("../app/features/sound/channelAudioEngine", () => ({
+    createChannelAudioEngine: () => playback,
 }));
 vi.mock("../app/features/chat/emotionClient", () => ({
     classifyEmotion: emotionClassifier.classify,
@@ -36,8 +36,10 @@ const account: Account = {
 };
 
 beforeEach(() => {
-    playback.start.mockReset();
-    playback.start.mockResolvedValue(vi.fn());
+    playback.play.mockReset();
+    playback.play.mockResolvedValue(vi.fn());
+    playback.preload.mockReset();
+    playback.dispose.mockReset();
     emotionClassifier.classify.mockReset();
     emotionClassifier.classify.mockRejectedValue(new Error("Modèle indisponible"));
 });
@@ -79,11 +81,39 @@ describe("Harmonie", () => {
         )));
         renderApp("/channels/5");
         await userEvent.click(await screen.findByRole("button", { name: "Lire le message" }));
-        await waitFor(() => expect(playback.start).toHaveBeenCalledWith(
+        await waitFor(() => expect(playback.play).toHaveBeenCalledWith(
             expect.objectContaining({ tonicMidi: expect.any(Number) }),
             expect.objectContaining({ root: 2, mode: "minor" }),
             expect.any(Function),
+            expect.any(AbortSignal),
         ));
+    });
+
+    it("restarts a staff from the beginning when clicked again", async () => {
+        mockLogin();
+        setToken("test-token");
+        server.use(http.get(`${api}/channel/message`, ({ request }) => HttpResponse.json(
+            new URL(request.url).searchParams.get("channel") === "9" ? [] : [{
+                id: 1,
+                content: "Bonjour",
+                user_id: 2,
+                user: "Zoe",
+                creation_date: new Date().toISOString(),
+                metadata: { harmonie: { instrument: "guitar" } },
+            }],
+        )));
+        const stop = vi.fn();
+        playback.play.mockResolvedValue(stop);
+        renderApp("/channels/5");
+
+        await userEvent.click(await screen.findByRole("button", { name: "Lire le message" }));
+        await screen.findByRole("button", { name: "Rejouer le message" });
+        const firstSignal = playback.play.mock.calls[0][3] as AbortSignal;
+        await userEvent.click(screen.getByRole("button", { name: "Rejouer le message" }));
+
+        expect(firstSignal.aborted).toBe(true);
+        expect(stop).toHaveBeenCalledOnce();
+        expect(playback.play).toHaveBeenCalledTimes(2);
     });
 
     it("sends the detected emotion without changing the conversation key", async () => {
@@ -358,15 +388,18 @@ describe("Harmonie", () => {
             Array.from(document.querySelectorAll(".channel-sheet[aria-hidden='false'] .emphasized-text-face"),
                 (node) => node.textContent).join(""),
         ).toBe("Bonjour"));
+        await waitFor(() => expect(playback.preload).toHaveBeenCalledWith(["piano"]));
         expect(document.querySelectorAll(".channel-staff-lines line")).toHaveLength(10);
         await userEvent.click(
             screen.getByRole("button", { name: "Lire le message" }),
         );
-        await waitFor(() => expect(playback.start).toHaveBeenCalled());
-        expect(playback.start.mock.calls[0][1].instrument).toBe("piano");
+        await waitFor(() => expect(playback.play).toHaveBeenCalled());
+        expect(playback.play.mock.calls[0][1].instrument).toBe("piano");
         await userEvent.type(screen.getByLabelText("Message"), " Salut ");
         await userEvent.click(screen.getByRole("button", { name: "Envoyer" }));
         await waitFor(() => expect(screen.getByText("Moi")).toBeInTheDocument());
+        await waitFor(() => expect(playback.preload.mock.calls.some(([instruments]) =>
+            instruments.includes("guitar"))).toBe(true));
         expect(sent).toEqual({
             channel: 5,
             content: "Salut",
@@ -422,6 +455,35 @@ describe("Harmonie", () => {
         ).toBeInTheDocument();
         await userEvent.click(checkbox);
         expect(await screen.findByText("Clé disponible")).toBeInTheDocument();
+    });
+
+    it("keeps the first holder when later claims or foreign releases are recorded", () => {
+        const claim = {
+            id: 1,
+            content: "Clé récupérée",
+            user_id: 1,
+            user: "Alice",
+            creation_date: new Date().toISOString(),
+            metadata: { harmonie: { type: "classroom_key", action: "claim" } },
+        };
+        const foreignClaim = { ...claim, id: 2, user_id: 2, user: "Zoe" };
+        const foreignRelease = {
+            ...foreignClaim,
+            id: 3,
+            metadata: { harmonie: { type: "classroom_key", action: "release" } },
+        };
+        const ownRelease = {
+            ...claim,
+            id: 4,
+            metadata: { harmonie: { type: "classroom_key", action: "release" } },
+        };
+
+        expect(keyStateFromMessages([foreignRelease, foreignClaim, claim])).toEqual({
+            holderId: 1,
+            holderName: "Alice",
+        });
+        expect(keyStateFromMessages([ownRelease, foreignRelease, foreignClaim, claim]))
+            .toEqual({ holderId: null, holderName: null });
     });
 
     it("blocks a different user from returning the key and resets at Paris midnight", async () => {

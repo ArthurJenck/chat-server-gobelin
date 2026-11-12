@@ -5,6 +5,8 @@ import { useChannelChat } from "../../features/chat/useChannelChat";
 import KeyControl from "../../features/key/KeyControl";
 import { PATHS } from "../../shared/config";
 import ChannelPages from "./ChannelPages";
+import { createChannelAudioEngine, type ChannelAudioEngine } from "../../features/sound/channelAudioEngine";
+import { CHANNEL_SOUND_SETTINGS } from "../../features/chat/channelPagination";
 import {
     DEFAULT_MUSIC_KEY,
     musicColor,
@@ -37,25 +39,47 @@ export default function ChannelPage() {
         toggleKey,
     } = useChannelChat(id, account);
     const textarea = useRef<HTMLTextAreaElement>(null);
-    const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+    const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null);
     const [activeMusicKey, setActiveMusicKey] = useState(DEFAULT_MUSIC_KEY);
     const largestViewportHeight = useRef<number | null>(null);
+    const [audioState, setAudioState] = useState<{
+        channelId: number;
+        engine: ChannelAudioEngine;
+    } | null>(null);
 
     useEffect(() => {
+        const engine = createChannelAudioEngine(CHANNEL_SOUND_SETTINGS);
+        setAudioState({ channelId: id, engine });
+        return () => engine.dispose();
+    }, [id]);
+
+    useEffect(() => {
+        const htmlOverflow = document.documentElement.style.overflow;
+        const bodyOverflow = document.body.style.overflow;
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+
         const update = () => {
             const height = window.visualViewport?.height ?? window.innerHeight;
+            const top = window.visualViewport?.offsetTop ?? 0;
             largestViewportHeight.current = Math.max(
                 largestViewportHeight.current ?? height,
                 height,
             );
-            setViewportHeight(height);
+            setViewport((current) => current?.height === height && current.top === top
+                ? current
+                : { height, top });
         };
         update();
         window.addEventListener("resize", update);
         window.visualViewport?.addEventListener("resize", update);
+        window.visualViewport?.addEventListener("scroll", update);
         return () => {
+            document.documentElement.style.overflow = htmlOverflow;
+            document.body.style.overflow = bodyOverflow;
             window.removeEventListener("resize", update);
             window.visualViewport?.removeEventListener("resize", update);
+            window.visualViewport?.removeEventListener("scroll", update);
         };
     }, []);
 
@@ -78,14 +102,14 @@ export default function ChannelPage() {
         <main
             className="channel-page"
             data-keyboard-open={
-                viewportHeight !== null &&
-                viewportHeight <
-                    (largestViewportHeight.current ?? viewportHeight) - 100
+                viewport !== null &&
+                viewport.height <
+                    (largestViewportHeight.current ?? viewport.height) - 100
             }
             style={
                 {
-                    ...(viewportHeight
-                        ? { height: `${viewportHeight}px` }
+                    ...(viewport
+                        ? { height: `${viewport.height}px`, top: `${viewport.top}px` }
                         : {}),
                     "--channel-key-color": musicColor(activeMusicKey),
                 } as React.CSSProperties
@@ -122,12 +146,16 @@ export default function ChannelPage() {
                     Analyse de l’émotion…
                 </p>
             )}
-            <ChannelPages
-                messages={messages}
-                userId={account?.id ?? null}
-                onKeyChange={setActiveMusicKey}
-                onVisibleMessagesChange={setVisibleMessages}
-            />
+            {audioState?.channelId === id && (
+                <ChannelPages
+                    messages={messages}
+                    userId={account?.id ?? null}
+                    audio={audioState.engine}
+                    preloadEnabled={Boolean(channel && !loading)}
+                    onKeyChange={setActiveMusicKey}
+                    onVisibleMessagesChange={setVisibleMessages}
+                />
+            )}
             {channel && (
                 <form
                     className="channel-composer"

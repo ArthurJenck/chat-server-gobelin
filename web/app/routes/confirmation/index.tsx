@@ -24,9 +24,13 @@ export default function Confirmation() {
         if (!getToken() && !registration) {
             void navigate("/register", { replace: true });
         } else if (!selectedInstrument) {
-            void navigate(PATHS.instrument, { replace: true });
+            if (hasSession && loading) return;
+            void navigate(
+                account && accountInstrument(account) ? PATHS.home : PATHS.instrument,
+                { replace: true },
+            );
         }
-    }, [completed, navigate, registration, selectedInstrument]);
+    }, [account, completed, hasSession, loading, navigate, registration, selectedInstrument]);
 
     async function continueToApp() {
         if (!selectedInstrument || busy) return;

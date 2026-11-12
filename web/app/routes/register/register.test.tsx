@@ -60,7 +60,7 @@ describe("Register page", () => {
                 metadata: { harmonie: { instrument: "harp" } },
             })),
         );
-        renderApp("/register");
+        const { router } = renderApp("/register");
 
         await userEvent.type(screen.getByLabelText("Nom d’utilisateur :"), " Alice ");
         await userEvent.type(screen.getByLabelText("Mot de passe :"), "secret");
@@ -79,5 +79,13 @@ describe("Register page", () => {
         await waitFor(() => expect(getToken()).toBe("register-token"));
         expect(submitted).toEqual({ username: "Alice", password: "secret", metadata: { instrument: "harp" } });
         expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+
+        await router.navigate(-1);
+        await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+        expect(screen.getByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+
+        await router.navigate(-1);
+        await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+        expect(screen.getByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
     });
 });

@@ -5,15 +5,22 @@ import MessageItem from "../../features/chat/MessageItem";
 import { applyPageMusicKeys, buildChannelStaffs, pageGradientKey, paginateChannelStaffs } from "../../features/chat/channelPagination";
 import { musicColor, type MusicKey } from "../../features/chat/conversationMusic";
 import type { Message } from "../../features/messages/types";
+import type { ChannelAudioEngine } from "../../features/sound/channelAudioEngine";
+import type { Instrument } from "../../features/sound/soundConfig";
+import { messageInstrument } from "../../features/chat/messageSound";
 
 export default function ChannelPages({
     messages,
     userId,
+    audio,
+    preloadEnabled,
     onKeyChange,
     onVisibleMessagesChange,
 }: {
     messages: Message[];
     userId: number | null;
+    audio: ChannelAudioEngine;
+    preloadEnabled: boolean;
     onKeyChange: (key: MusicKey) => void;
     onVisibleMessagesChange: (messages: Message[]) => void;
 }) {
@@ -27,6 +34,16 @@ export default function ChannelPages({
     const pages = useMemo(() => applyPageMusicKeys(
         paginateChannelStaffs(blocks, size.height), size.width,
     ), [blocks, size.height, size.width]);
+
+    useEffect(() => {
+        if (!preloadEnabled) return;
+        const visible = new Set<Instrument>();
+        for (const block of pages[activePage] ?? []) {
+            if (block.plan.events.some((event) => event.midi !== null))
+                visible.add(messageInstrument(block.message));
+        }
+        audio.preload([...visible]);
+    }, [activePage, audio, pages, preloadEnabled]);
 
     useEffect(() => {
         onKeyChange(pageGradientKey(pages[activePage] ?? []));
@@ -193,6 +210,7 @@ export default function ChannelPages({
                                         key={block.key}
                                         block={block}
                                         isOwn={block.message.user_id === userId}
+                                        audio={audio}
                                     />
                                 ))}
                             </ol>

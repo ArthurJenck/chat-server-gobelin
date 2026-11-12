@@ -37,6 +37,22 @@ describe("Confirmation page", () => {
         },
     );
 
+    it("returns to home when a completed account reopens confirmation", async () => {
+        setToken("valid-token");
+        server.use(
+            http.get(`${api}/me`, () => HttpResponse.json({
+                id: 1,
+                username: "Alice",
+                channels: [],
+                metadata: { harmonie: { instrument: "harp" } },
+            })),
+        );
+
+        const { router } = renderApp("/profil/confirmation");
+        await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+        expect(await screen.findByRole("heading", { name: "Mes groupes" })).toBeInTheDocument();
+    });
+
     it("shows the confirmation design on the profile and saves an instrument after validation", async () => {
         setToken("valid-token");
         let saved: unknown;
@@ -56,7 +72,7 @@ describe("Confirmation page", () => {
         );
         renderApp("/profil");
         expect(await screen.findByRole("heading", { name: "Tu fais partie de la communauté Harmonie" })).toBeInTheDocument();
-        expect(screen.getByText("Alice")).toBeInTheDocument();
+        expect(await screen.findByText("Alice")).toBeInTheDocument();
         await userEvent.click(screen.getByRole("button", { name: "Modifier l’instrument : Guitare" }));
         expect(await screen.findByRole("radio", { name: "Guitare" })).toBeChecked();
         await userEvent.click(await screen.findByRole("radio", { name: "Harpe" }));

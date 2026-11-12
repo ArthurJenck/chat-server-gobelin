@@ -100,6 +100,37 @@ describe("Channel page", () => {
         });
     });
 
+    it("follows the visible viewport and locks document scrolling while open", async () => {
+        const originalViewport = Object.getOwnPropertyDescriptor(window, "visualViewport");
+        const visualViewport = new EventTarget();
+        Object.defineProperty(visualViewport, "height", { configurable: true, value: 800 });
+        Object.defineProperty(visualViewport, "offsetTop", { configurable: true, value: 0 });
+        Object.defineProperty(window, "visualViewport", { configurable: true, value: visualViewport });
+        mockChannel([]);
+
+        try {
+            const page = renderApp("/channels/5");
+            expect(document.documentElement.style.overflow).toBe("hidden");
+            expect(document.body.style.overflow).toBe("hidden");
+            expect(document.querySelector(".channel-page")).toHaveStyle({ height: "800px", top: "0px" });
+
+            Object.defineProperty(visualViewport, "height", { configurable: true, value: 450 });
+            Object.defineProperty(visualViewport, "offsetTop", { configurable: true, value: 120 });
+            visualViewport.dispatchEvent(new Event("resize"));
+            visualViewport.dispatchEvent(new Event("scroll"));
+            await waitFor(() => expect(document.querySelector(".channel-page"))
+                .toHaveStyle({ height: "450px", top: "120px" }));
+            expect(document.querySelector(".channel-page")).toHaveAttribute("data-keyboard-open", "true");
+
+            page.unmount();
+            expect(document.documentElement.style.overflow).toBe("");
+            expect(document.body.style.overflow).toBe("");
+        } finally {
+            if (originalViewport) Object.defineProperty(window, "visualViewport", originalViewport);
+            else Reflect.deleteProperty(window, "visualViewport");
+        }
+    });
+
     it("classifies an old message once and reuses its local result", async () => {
         emotionClassifier.classify.mockResolvedValue("sadness");
         mockChannel([message(1, "Je suis triste")]);

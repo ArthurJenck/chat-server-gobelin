@@ -35,16 +35,17 @@ export function keyStateFromMessages(
         })
         .sort(
             (a, b) =>
-                Date.parse(b.posted_at ?? b.creation_date) -
-                    Date.parse(a.posted_at ?? a.creation_date) ||
-                (b.id ?? 0) - (a.id ?? 0),
+                Date.parse(a.posted_at ?? a.creation_date) -
+                    Date.parse(b.posted_at ?? b.creation_date) ||
+                (a.id ?? 0) - (b.id ?? 0),
         );
-    const latest = events[0];
-    if (
-        !latest ||
-        (latest.metadata?.[NAMESPACE] as Record<string, unknown>).action ===
-            "release"
-    )
-        return { holderId: null, holderName: null };
-    return { holderId: latest.user_id, holderName: latest.user };
+    let state: KeyState = { holderId: null, holderName: null };
+    for (const message of events) {
+        const action = (message.metadata?.[NAMESPACE] as Record<string, unknown>).action;
+        if (action === "claim" && state.holderId === null)
+            state = { holderId: message.user_id, holderName: message.user };
+        else if (action === "release" && state.holderId === message.user_id)
+            state = { holderId: null, holderName: null };
+    }
+    return state;
 }

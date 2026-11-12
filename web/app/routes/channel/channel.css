@@ -4,9 +4,7 @@
     box-sizing: border-box;
     display: flex;
     width: 100%;
-    max-width: 402px;
     flex-direction: column;
-    margin: 0 auto;
     overflow: hidden;
     background: var(--color-background);
 }
@@ -60,6 +58,7 @@
     place-items: center;
     border: 0.4px dashed var(--color-ink);
     border-radius: 50%;
+    transform: rotate(180deg);
 }
 
 .channel-back img {
@@ -165,7 +164,7 @@
     height: var(--channel-messages-height, 0px);
     margin-top: var(--channel-messages-top, 0px);
     perspective: 1200px;
-    pointer-events: auto;
+    pointer-events: none;
     transform-style: preserve-3d;
 }
 
@@ -181,8 +180,13 @@
     background: var(--color-background);
     backface-visibility: hidden;
     list-style: none;
+    pointer-events: auto;
     transform-origin: calc(100% - 20px) 50%;
     transform-style: preserve-3d;
+}
+
+.channel-sheet[inert] {
+    pointer-events: none;
 }
 
 .channel-message {
