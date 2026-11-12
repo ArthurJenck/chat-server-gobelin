@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"chat-gobelin-api/internal"
 	"chat-gobelin-api/internal/users"
@@ -211,6 +212,93 @@ func (h channelHandler) Edit(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 	h.hub.Broadcast(result, []int64{channel.ID})
+	writer.WriteHeader(http.StatusOK)
+	writer.Write(result)
+}
+
+// serveWS create a websocket allowing to read events from one (or several) channel
+func (h channelHandler) ServeWS(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+
+	userRaw := ctx.Value("user")
+	user := userRaw.(*users.User)
+	if user == nil {
+		log.Printf("No user found")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	channelIDStrings := request.URL.Query()["channel"]
+	if len(channelIDStrings) == 0 {
+		log.Printf("No channel found: %s", request.URL.RawQuery)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	channels := make([]int64, 0, len(channelIDStrings))
+	for _, channelIDString := range channelIDStrings {
+		channelID, err := strconv.ParseInt(channelIDString, 10, 64)
+		if err != nil {
+			log.Printf("Error converting channel ID: %s", err.Error())
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		channels = append(channels, channelID)
+	}
+
+	//It return the websocket, but we don't need it in the controller
+	_, err := websockets.NewWebsocket(h.hub, writer, request, user.ID, channels)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	event := users.ConnectedUser{
+		Operation: internal.USER_CONNECTED,
+		ID: user.ID,
+	}
+	result, err := json.Marshal(event)
+	if err != nil {
+		log.Printf("Error marshaling value: %s", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	h.hub.Broadcast(result, channels)
+}
+
+func (h channelHandler) GetConnectedUsers(writer http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+
+	channelIDStrings := request.URL.Query()["channel"]
+	if len(channelIDStrings) == 0 {
+		log.Printf("No channel found: %s", request.URL.RawQuery)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	channels := make([]int64, 0, len(channelIDStrings))
+	for _, channelIDString := range channelIDStrings {
+		channelID, err := strconv.ParseInt(channelIDString, 10, 64)
+		if err != nil {
+			log.Printf("Error converting channel ID: %s", err.Error())
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		channels = append(channels, channelID)
+	}
+
+	connected := h.hub.GetConnectedUsers(channels)
+	users, err := h.userRepo.GetByIDs(ctx, connected)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	result, err := json.Marshal(users)
+	if err != nil {
+		log.Printf("Error marshaling value: %s", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	writer.WriteHeader(http.StatusOK)
 	writer.Write(result)
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"chat-gobelin-api/internal"
 	"chat-gobelin-api/internal/users"
 	"chat-gobelin-api/internal/channels"
 
@@ -135,6 +136,7 @@ func (r *repo) Create(ctx context.Context, content string, rawMetadata json.RawM
 		message.User = "anonymous"
 	}
 	message.RawMetadata = rawMetadata
+	message.Operation = &internal.MESSAGE_CREATED
 	return &message, nil
 }
 
@@ -190,6 +192,7 @@ func (r *repo) Edit(ctx context.Context, message Message, content string, rawMet
 		editedMessage.Metadata = message.Metadata
 	}
 	editedMessage.User = message.User
+	editedMessage.Operation = &internal.MESSAGE_EDITED
 
 	return &editedMessage, nil
 }

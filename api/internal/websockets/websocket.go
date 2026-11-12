@@ -2,6 +2,7 @@ package websockets
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -45,6 +46,38 @@ type Websocket struct {
 
 	//Channels to watch
 	channels map[int64]struct{}
+
+	//User ID. We store a user ID and not the object both because assuring consistency is difficult here and because this package should not have links toward business objets
+	UserID int64
+}
+
+func NewWebsocket(hub *BroadcastHub, writer http.ResponseWriter, request *http.Request, userID int64, channels []int64) (*Websocket, error) {
+
+	channelMap := make(map[int64]struct{})
+	for _, channelID := range channels {
+		channelMap[channelID] = struct{}{}
+	}
+
+	conn, err := upgrader.Upgrade(writer, request, nil)
+	if err != nil {
+		log.Println(err)
+		return nil, fmt.Errorf("Error upgrading connection: %w")
+	}
+
+	client := &Websocket{
+		hub: hub,
+		conn: conn,
+		send: make(chan []byte, 256),
+		channels: channelMap,
+		UserID: userID,
+	}
+
+	client.hub.register <- client
+
+	go client.WritePump()
+	go client.ReadPump()
+
+	return client, nil
 }
 
 func (w *Websocket) IsInterested(channelIDs []int64) bool {
@@ -61,7 +94,7 @@ func (w *Websocket) IsInterested(channelIDs []int64) bool {
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (w *Websocket) readPump() {
+func (w *Websocket) ReadPump() {
 	defer func() {
 		w.hub.unregister <- w
 		w.conn.Close()
@@ -87,7 +120,7 @@ func (w *Websocket) readPump() {
 // A goroutine running writePump is started for each connection. The
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
-func (w *Websocket) writePump() {
+func (w *Websocket) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()

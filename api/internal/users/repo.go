@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"chat-gobelin-api/internal"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -13,6 +14,7 @@ type Repo interface {
 	GetByID(ctx context.Context, id int64) (*User, error)
 	Create(ctx context.Context, name string, metadata json.RawMessage, passwordHash []byte) (*User, error)
 	EditMetadata(ctx context.Context, user User, rawMetadata json.RawMessage) (*User, error)
+	GetByIDs(ctx context.Context, userIDs []int64) ([]User, error)
 }
 
 type repo struct {
@@ -82,6 +84,31 @@ func (r *repo) GetByID(ctx context.Context, id int64) (*User, error) {
 	return &user, nil
 }
 
+func (r *repo) GetByIDs(ctx context.Context, userIDs []int64) ([]User, error) {
+	if len(userIDs) == 0 {
+		return nil, nil
+	}
+	//We don't retrieve balance nor passwords (or hashes) when retrieving multiple users
+	query, args, err := sqlx.In(`SELECT
+			id,
+			username,
+			metadata
+		FROM users
+		WHERE id IN (?)`, userIDs)
+	if err != nil {
+		return nil, fmt.Errorf("Error hydrating query: %w", err)
+	}
+	query = r.db.Rebind(query)
+
+	var users []User
+	err = r.db.SelectContext(ctx, &users, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("Error retrieving users: %w", err)
+	}
+
+	return users, nil
+}
+
 func (r *repo) Create(ctx context.Context, name string, rawMetadata json.RawMessage, passwordHash []byte) (*User, error) {
 
 	var metadata map[string]json.RawMessage
@@ -101,6 +128,7 @@ func (r *repo) Create(ctx context.Context, name string, rawMetadata json.RawMess
 	}
 
 	user.Metadata = metadata
+	user.Operation = &internal.USER_CREATED
 
 	return &user, nil
 }
@@ -125,6 +153,7 @@ func (r *repo) EditMetadata(ctx context.Context, user User, rawMetadata json.Raw
 	}
 
 	editedUser.Metadata = metadata
+	editedUser.Operation = &internal.USER_EDITED
 
 	return &editedUser, nil
 }
