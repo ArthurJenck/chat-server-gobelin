@@ -61,5 +61,7 @@ curl -XGET 0.0.0.0:4000/channel/message?channel=1 -H 'Authorization: Bearer eyJh
 
 curl -XGET 82.229.112.208:32769/channel/message?channel=1 -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImlzYWJlbGxlIiwiaWQiOjIsImV4cCI6MTc5NDY0NTYzNX0.eqxnl43l88H1U2jq91nGZVLBnr94uD9ll9a75xRbS08'
 
+curl -XGET 82.229.112.208:32769/channel/connected?channel=1 -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImlzYWJlbGxlIiwiaWQiOjIsImV4cCI6MTc5NDY0NTYzNX0.eqxnl43l88H1U2jq91nGZVLBnr94uD9ll9a75xRbS08'
+
 serveur publique :
 http://37.27.91.240:4000/

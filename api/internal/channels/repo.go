@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"chat-gobelin-api/internal"
 	"chat-gobelin-api/internal/users"
 
 	"github.com/jmoiron/sqlx"
@@ -145,6 +146,8 @@ func (r *repo) Create(ctx context.Context, name string, metadata json.RawMessage
 		return nil, fmt.Errorf("Error creating channel: %w", err)
 	}
 
+	channel.Operation = &internal.CHANNEL_CREATED
+
 	//TODO: add creator to it
 	return &channel, nil
 }
@@ -183,6 +186,7 @@ func (r *repo) Edit(ctx context.Context, channel Channel, content string, rawMet
 		return nil, fmt.Errorf("Error unmarshaling edited metadata for user: %w", err)
 	}
 	editedChannel.Metadata = metadata
+	editedChannel.Operation = &internal.CHANNEL_EDITED
 
 	return &editedChannel, nil
 }

@@ -2,8 +2,6 @@ package websockets
 
 import (
 	"log"
-	"net/http"
-	"strconv"
 )
 
 type BroadcastHub struct {
@@ -18,41 +16,6 @@ type BroadcastHub struct {
 
 	// Unregister requests from clients.
 	unregister chan *Websocket
-}
-
-// serveWs handles websocket requests from the peer.
-func (hub *BroadcastHub) ServeWS(writer http.ResponseWriter, request *http.Request) {
-	channelIDStrings := request.URL.Query()["channel"]
-	if len(channelIDStrings) == 0 {
-		log.Printf("No channel found: %s", request.URL.RawQuery)
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	channels := make(map[int64]struct{})
-	for _, channelIDString := range channelIDStrings {
-		channelID, err := strconv.ParseInt(channelIDString, 10, 64)
-		if err != nil {
-			log.Printf("Error converting channel ID: %s", err.Error())
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		channels[channelID] = struct{}{}
-	}
-
-	conn, err := upgrader.Upgrade(writer, request, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	client := &Websocket{hub: hub, conn: conn, send: make(chan []byte, 256), channels: channels}
-	client.hub.register <- client
-
-	// Allow collection of memory referenced by the caller by doing all work in
-	// new goroutines.
-	go client.writePump()
-	go client.readPump()
 }
 
 type message struct{
@@ -103,4 +66,14 @@ func (h *BroadcastHub) Broadcast(body []byte, channel []int64) {
 		Channel: channel,
 	}
 	h.broadcast <- m
+}
+
+func (h *BroadcastHub) GetConnectedUsers(channelIDs []int64) []int64 {
+	connected := make([]int64, 0)
+	for client := range h.clients {
+		if client.IsInterested(channelIDs) {
+			connected = append(connected, client.UserID)
+		}
+	}
+	return connected
 }

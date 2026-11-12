@@ -13,4 +13,5 @@ type Message struct {
 	PostedAt     string `db:"posted_at" json:"posted_at"`
 	RawMetadata  []byte  `db:"metadata" json:"-"`
 	Metadata     map[string]json.RawMessage  `db:"-" json:"metadata"`
+	Operation    *string `db:"-" json:"operation,omitempty"`
 }
