@@ -575,6 +575,13 @@ describe("Harmonie", () => {
 
     it("allows the holder to return the key", async () => {
         mockLogin();
+        const mainMessages = [{
+            id: 20,
+            content: "Bonjour",
+            user_id: 1,
+            user: "Alice",
+            creation_date: new Date().toISOString(),
+        }];
         const events: Array<{
             id: number;
             content: string;
@@ -588,7 +595,7 @@ describe("Harmonie", () => {
                 HttpResponse.json(
                     new URL(request.url).searchParams.get("channel") === "9"
                         ? events
-                        : [],
+                        : mainMessages,
                 ),
             ),
             http.post(`${api}/channel/message`, async ({ request }) => {
@@ -615,12 +622,18 @@ describe("Harmonie", () => {
         const checkbox = await screen.findByRole("checkbox", {
             name: "Clé récupérée",
         });
+        await waitFor(() => expect(checkbox).toBeEnabled());
+        expect(document.querySelector(".channel-key-symbol")).toHaveAttribute("src", "/pictos/key.svg");
+        expect(document.querySelector(".channel-author-key")).toBeNull();
         await userEvent.click(checkbox);
         expect(
             await screen.findByText("Clé détenue par Alice"),
         ).toBeInTheDocument();
+        await waitFor(() => expect(document.querySelector(".channel-message-author-own .channel-author-key"))
+            .toHaveAttribute("src", "/pictos/key.svg"));
         await userEvent.click(checkbox);
         expect(await screen.findByText("Clé disponible")).toBeInTheDocument();
+        await waitFor(() => expect(document.querySelector(".channel-author-key")).toBeNull());
     });
 
     it("keeps the first holder when later claims or foreign releases are recorded", () => {

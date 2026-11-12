@@ -29,6 +29,7 @@ export default function ChannelPage() {
         loading,
         keyChannelId,
         keyState,
+        keyReady,
         content,
         setContent,
         busy,
@@ -130,6 +131,7 @@ export default function ChannelPage() {
                         state={keyState}
                         userId={account.id}
                         busy={keyBusy}
+                        ready={keyReady}
                         onChange={() => void toggleKey()}
                     />
                 )}
@@ -151,6 +153,7 @@ export default function ChannelPage() {
                 <ChannelPages
                     messages={messages}
                     userId={account?.id ?? null}
+                    keyHolderId={hasKey && keyReady ? keyState.holderId : null}
                     audio={audioState.engine}
                     preloadEnabled={Boolean(channel && !loading)}
                     arrival={arrival}

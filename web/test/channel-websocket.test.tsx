@@ -336,3 +336,145 @@ it("resets the key at Paris midnight", async () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
     expect(result.current.keyState.holderId).toBeNull();
 });
+
+it("arbitrates two simultaneous claims and allows only the winner to release", async () => {
+    const events: Message[] = [];
+    const users = [1, 2, 1];
+    api.getMessages.mockImplementation(async (id: number) => id === 9 ? [...events].reverse() : []);
+    api.sendMessage.mockImplementation(async (_id: number, content: string, metadata: { action: "claim" | "release" }) => {
+        const userId = users.shift()!;
+        const sent = { ...keyEvent(events.length + 1, metadata.action, userId), content };
+        events.push(sent);
+        return sent;
+    });
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+        <MemoryRouter>{children}</MemoryRouter>;
+    const louisAccount = { ...account, id: 2, username: "Louis" };
+    const alice = renderHook(() => useChannelChat(5, account), { wrapper });
+    const louis = renderHook(() => useChannelChat(5, louisAccount), { wrapper });
+    await flush();
+    expect(alice.result.current.keyReady).toBe(true);
+    expect(louis.result.current.keyReady).toBe(true);
+
+    await act(async () => {
+        await Promise.all([alice.result.current.toggleKey(), louis.result.current.toggleKey()]);
+    });
+    expect(api.sendMessage).toHaveBeenCalledTimes(2);
+    expect(alice.result.current.keyState.holderId).toBe(1);
+    expect(louis.result.current.keyState.holderId).toBe(1);
+
+    await act(async () => { await louis.result.current.toggleKey(); });
+    expect(api.sendMessage).toHaveBeenCalledTimes(2);
+
+    await act(async () => { await alice.result.current.toggleKey(); });
+    expect(api.sendMessage).toHaveBeenCalledTimes(3);
+    act(() => FakeSocket.instances[1].emit(JSON.stringify({
+        ...events[2], operation: "message.created", channel_id: 9,
+    })));
+    await act(async () => { await vi.advanceTimersByTimeAsync(40); });
+    expect(alice.result.current.keyState.holderId).toBeNull();
+    expect(louis.result.current.keyState.holderId).toBeNull();
+});
+
+it("does not post a claim when the preflight read finds another holder", async () => {
+    let key: Message[] = [];
+    api.getMessages.mockImplementation(async (id: number) => id === 9 ? key : []);
+    const { result } = renderHook(() => useChannelChat(5, account), {
+        wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter>,
+    });
+    await flush();
+    expect(result.current.keyState.holderId).toBeNull();
+    key = [keyEvent(1, "claim")];
+    await act(async () => { await result.current.toggleKey(); });
+    expect(api.sendMessage).not.toHaveBeenCalled();
+    expect(result.current.keyState.holderId).toBe(2);
+    expect(result.current.keyBusy).toBe(false);
+});
+
+it("does not carry a pending key action into another channel", async () => {
+    let finishSend: (message: Message) => void = () => {};
+    api.getMessages.mockResolvedValue([]);
+    api.sendMessage.mockImplementation(() => new Promise<Message>((resolve) => {
+        finishSend = resolve;
+    }));
+    const { result, rerender } = renderHook(({ id }) => useChannelChat(id, account), {
+        initialProps: { id: 5 },
+        wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter>,
+    });
+    await flush();
+    let pending: Promise<void> | undefined;
+    act(() => { pending = result.current.toggleKey(); });
+    await flush();
+    expect(api.sendMessage).toHaveBeenCalledOnce();
+    rerender({ id: 7 });
+    await flush();
+    expect(result.current.keyBusy).toBe(false);
+    await act(async () => {
+        finishSend(keyEvent(1, "claim", 1));
+        await pending;
+    });
+    expect(result.current.keyState.holderId).toBeNull();
+});
+
+it("keeps a socket claim when an older HTTP snapshot finishes later", async () => {
+    let finishInitial: (messages: Message[]) => void = () => {};
+    let keyReads = 0;
+    api.getMessages.mockImplementation((id: number) => {
+        if (id !== 9) return Promise.resolve([]);
+        if (++keyReads === 1) return new Promise<Message[]>((resolve) => { finishInitial = resolve; });
+        return Promise.resolve([]);
+    });
+    const { result } = renderHook(() => useChannelChat(5, account), {
+        wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter>,
+    });
+    await flush();
+    const socket = FakeSocket.instances[0];
+    const payload = JSON.stringify({
+        ...keyEvent(2, "claim"), operation: "message.created", channel_id: 9,
+    });
+    expect(parseChannelEvents(payload)[0].message?.id).toBe(2);
+    act(() => socket.emit(payload));
+    await act(async () => { await vi.advanceTimersByTimeAsync(40); });
+    expect(result.current.keyState.holderId).toBe(2);
+    await act(async () => { finishInitial([]); });
+    await flush();
+    expect(result.current.keyState.holderId).toBe(2);
+    expect(result.current.keyReady).toBe(true);
+});
+
+it("catches a missed key change on websocket reconnect", async () => {
+    let key: Message[] = [];
+    api.getMessages.mockImplementation(async (id: number) => id === 9 ? key : []);
+    const { result } = renderHook(() => useChannelChat(5, account), {
+        wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter>,
+    });
+    await flush();
+    const first = FakeSocket.instances[0];
+    act(() => first.open());
+    await flush();
+    act(() => first.close());
+    key = [keyEvent(1, "claim")];
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    act(() => FakeSocket.instances[1].open());
+    await flush();
+    expect(result.current.keyState.holderId).toBe(2);
+});
+
+it("resets the key when a hidden tab reopens after Paris midnight", async () => {
+    vi.setSystemTime(new Date("2026-11-12T22:59:58Z"));
+    const claim = keyEvent(1, "claim");
+    api.getMessages.mockImplementation(async (id: number) => id === 9 ? [claim] : []);
+    const { result } = renderHook(() => useChannelChat(5, account), {
+        wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter>,
+    });
+    await flush();
+    expect(result.current.keyState.holderId).toBe(2);
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    visibility.mockReturnValue("hidden");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    vi.setSystemTime(new Date("2026-11-12T23:00:01Z"));
+    visibility.mockReturnValue("visible");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    await flush();
+    expect(result.current.keyState.holderId).toBeNull();
+});

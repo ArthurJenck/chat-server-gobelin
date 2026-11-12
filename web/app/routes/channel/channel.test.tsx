@@ -244,8 +244,8 @@ describe("Channel page", () => {
             .toHaveStyle({ "--channel-key-color": "#FFA200" }));
     });
 
-    it("shows the key over the star in general and locks it when another user holds it", async () => {
-        mockChannel([], [{
+    it("hides the key control when another user holds it and marks that user's messages", async () => {
+        mockChannel([message(2, "Bonjour")], [{
             ...message(1, "Clé récupérée"),
             creation_date: new Date().toISOString(),
             metadata: { harmonie: { type: "classroom_key", action: "claim" } },
@@ -261,7 +261,9 @@ describe("Channel page", () => {
         const checkbox = await screen.findByRole("checkbox", { name: "Clé récupérée" });
         await waitFor(() => expect(checkbox).toBeChecked());
         expect(checkbox).toBeDisabled();
-        expect(document.querySelector(".channel-key-symbol")).toHaveAttribute("src", "/pictos/key.svg");
+        expect(document.querySelector(".channel-key-symbol")).toBeNull();
+        await waitFor(() => expect(document.querySelector(".channel-author-key"))
+            .toHaveAttribute("src", "/pictos/key.svg"));
     });
 
     it("repaginates on resize and scrolls several pages with one wheel movement", async () => {

@@ -203,6 +203,12 @@
     height: 16px;
 }
 
+.channel-message-author .channel-author-key {
+    width: 9px;
+    height: 20px;
+    object-fit: contain;
+}
+
 .channel-staff {
     position: relative;
     display: block;

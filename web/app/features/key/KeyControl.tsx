@@ -4,13 +4,16 @@ export default function KeyControl({
     state,
     userId,
     busy,
+    ready,
     onChange,
 }: {
     state: KeyState;
     userId: number;
     busy: boolean;
+    ready: boolean;
     onChange: () => void;
 }) {
+    const isOwn = state.holderId === userId;
     return (
         <div className="channel-key-control">
             <label className="channel-key-label">
@@ -19,20 +22,22 @@ export default function KeyControl({
                     aria-label="Clé récupérée"
                     checked={state.holderId !== null}
                     disabled={
-                        busy ||
+                        !ready || busy ||
                         (state.holderId !== null && state.holderId !== userId)
                     }
                     onChange={onChange}
                 />
                 <img className="channel-key-star" src="/pictos/star.svg" alt="" />
-                {state.holderId !== null && (
+                {ready && (state.holderId === null || isOwn) && (
                     <img className="channel-key-symbol" src="/pictos/key.svg" alt="" />
                 )}
             </label>
             <span className="channel-screen-reader" role="status">
-                {state.holderName
-                    ? `Clé détenue par ${state.holderName}`
-                    : "Clé disponible"}
+                {!ready
+                    ? "Chargement de la clé…"
+                    : state.holderId === null
+                    ? "Clé disponible"
+                    : `Clé détenue par ${state.holderName || "un utilisateur"}`}
             </span>
         </div>
     );

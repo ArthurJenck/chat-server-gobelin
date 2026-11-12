@@ -16,6 +16,7 @@ import ChannelPagination from "./ChannelPagination";
 export default function ChannelPages({
     messages,
     userId,
+    keyHolderId = null,
     audio,
     preloadEnabled,
     arrival,
@@ -24,6 +25,7 @@ export default function ChannelPages({
 }: {
     messages: Message[];
     userId: number | null;
+    keyHolderId?: number | null;
     audio: ChannelAudioEngine;
     preloadEnabled: boolean;
     arrival: MessageArrival | null;
@@ -369,6 +371,7 @@ export default function ChannelPages({
                                             key={block.key}
                                             block={block}
                                             isOwn={block.message.user_id === userId}
+                                            hasClassroomKey={block.message.user_id === keyHolderId}
                                             onPlay={(selected) => {
                                                 pageNavigation.current?.kill();
                                                 pageNavigation.current = null;

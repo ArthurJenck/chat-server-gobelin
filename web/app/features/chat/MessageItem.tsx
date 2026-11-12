@@ -7,6 +7,7 @@ import type { ChannelVisual } from "./useChannelPlayback";
 export default function MessageItem({
     block,
     isOwn,
+    hasClassroomKey = false,
     onPlay,
     visual,
     loading,
@@ -14,6 +15,7 @@ export default function MessageItem({
 }: {
     block: ChannelStaffBlock;
     isOwn: boolean;
+    hasClassroomKey?: boolean;
     onPlay: (block: ChannelStaffBlock) => void;
     visual: ChannelVisual | null;
     loading: boolean;
@@ -75,6 +77,7 @@ export default function MessageItem({
                 >
                     <span>{isOwn ? "Moi" : message.user}</span>
                     {isOwn && <img src="/pictos/note.svg" alt="" />}
+                    {hasClassroomKey && <img className="channel-author-key" src="/pictos/key.svg" alt="Clé détenue" />}
                 </div>
             )}
             <button

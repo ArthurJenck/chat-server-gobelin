@@ -1,10 +1,12 @@
 import { getToken } from "../auth/token";
 import { NAMESPACE } from "../../shared/config";
 import { getApiUrl } from "../../shared/http/client";
+import type { Message } from "../messages/types";
 
 export type ChannelMessageEvent = {
     channelId: number;
     operation: "message.created" | "message.edited";
+    message?: Message;
 };
 
 export function parseChannelEvents(data: unknown): ChannelMessageEvent[] {
@@ -23,6 +25,13 @@ export function parseChannelEvents(data: unknown): ChannelMessageEvent[] {
             events.push({
                 channelId: event.channel_id as number,
                 operation: event.operation,
+                ...(Number.isSafeInteger(event.id) &&
+                Number.isSafeInteger(event.user_id) &&
+                typeof event.user === "string" &&
+                typeof event.content === "string" &&
+                typeof event.creation_date === "string"
+                    ? { message: event as unknown as Message }
+                    : {}),
             });
         } catch {
             continue;

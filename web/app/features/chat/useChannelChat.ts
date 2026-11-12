@@ -3,17 +3,16 @@ import { useNavigate } from "react-router";
 import {
     KEY_CHANNEL_NAME,
     NAMESPACE,
-    PARIS_TIME_ZONE,
     PATHS,
 } from "../../shared/config";
 import { ApiError } from "../../shared/http/ApiError";
 import { metadataForProject } from "../../shared/projectMetadata";
 import {
     ensureKeyChannel,
-    readKeyState,
-    toggleKeyState,
+    readKeyMessages,
+    sendKeyAction,
 } from "../key/keyChannel";
-import type { KeyState } from "../key/keyState";
+import { AVAILABLE_KEY, keyStateFromMessages, mergeKeyMessages, parisDay, type KeyState } from "../key/keyState";
 import { getMessages, sendMessage } from "../messages/api";
 import type { Message } from "../messages/types";
 import { accountInstrument } from "../users/instrument";
@@ -25,22 +24,14 @@ import { messageEmotion, type Emotion } from "./emotion";
 import { messageIdentity } from "./channelScore";
 import { watchChannelSocket } from "./channelSocket";
 
-const AVAILABLE_KEY: KeyState = { holderId: null, holderName: null };
-const parisDay = new Intl.DateTimeFormat("en-CA", {
-    timeZone: PARIS_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-});
-
 function untilParisMidnight() {
     const now = Date.now();
-    const today = parisDay.format(now);
+    const today = parisDay(new Date(now));
     let lower = now;
     let upper = now + 26 * 60 * 60 * 1000;
     while (upper - lower > 1_000) {
         const middle = Math.floor((lower + upper) / 2);
-        if (parisDay.format(middle) === today) lower = middle;
+        if (parisDay(new Date(middle)) === today) lower = middle;
         else upper = middle;
     }
     return Math.max(1, upper - now);
@@ -65,6 +56,7 @@ export function useChannelChat(id: number, account: Account | null) {
     });
     const [keyChannelId, setKeyChannelId] = useState<number | null>(null);
     const [keyState, setKeyState] = useState<KeyState>(AVAILABLE_KEY);
+    const [keyReady, setKeyReady] = useState(false);
     const [loading, setLoading] = useState(true);
     const [content, setContent] = useState("");
     const [busy, setBusy] = useState(false);
@@ -79,7 +71,18 @@ export function useChannelChat(id: number, account: Account | null) {
     const sentIds = useRef(new Set<string>());
     const sending = useRef(false);
     const requestSyncRef = useRef<((messages: boolean, key: boolean) => Promise<void>) | null>(null);
+    const keyEventsRef = useRef<Message[]>([]);
+    const keySessionRef = useRef(0);
+    const keyActionPending = useRef(false);
     const arrivalSequence = useRef(0);
+
+    const mergeKeyEvents = useCallback((incoming: Message[]) => {
+        const merged = mergeKeyMessages(keyEventsRef.current, incoming);
+        keyEventsRef.current = merged;
+        const next = keyStateFromMessages(merged);
+        setKeyState(next);
+        return next;
+    }, []);
 
     useEffect(() => {
         knownMessages.current = null;
@@ -141,8 +144,11 @@ export function useChannelChat(id: number, account: Account | null) {
 
     useEffect(() => {
         if (!account || !channel) return;
+        const session = ++keySessionRef.current;
         let active = true;
+        let currentKeyDay = parisDay(new Date());
         let stopSocket: (() => void) | null = null;
+        let stopDayListeners: (() => void) | null = null;
         let midnightTimer: ReturnType<typeof setTimeout> | null = null;
         let retryTimer: ReturnType<typeof setTimeout> | null = null;
         let running = false;
@@ -153,6 +159,11 @@ export function useChannelChat(id: number, account: Account | null) {
         let waiters: Array<{ resolve: () => void; reject: (cause: unknown) => void }> = [];
         setLoading(true);
         setKeyChannelId(null);
+        setKeyReady(false);
+        setKeyBusy(false);
+        setKeyState(AVAILABLE_KEY);
+        keyEventsRef.current = [];
+        keyActionPending.current = false;
 
         const begin = async () => {
             const technicalId = hasKey ? (await ensureKeyChannel(account)).id : null;
@@ -160,13 +171,15 @@ export function useChannelChat(id: number, account: Account | null) {
             setKeyChannelId(technicalId);
 
             const loadSnapshot = async (loadMessages: boolean, loadKey: boolean) => {
-                const [nextMessages, nextKey] = await Promise.all([
+                const [messagesResult, keyResult] = await Promise.allSettled([
                     loadMessages ? getMessages(id) : Promise.resolve(null),
                     loadKey && technicalId !== null
-                        ? readKeyState(technicalId)
+                        ? readKeyMessages(technicalId)
                         : Promise.resolve(null),
                 ]);
                 if (!active) return;
+                const nextMessages = messagesResult.status === "fulfilled" ? messagesResult.value : null;
+                const nextKey = keyResult.status === "fulfilled" ? keyResult.value : null;
                 if (nextMessages !== null) {
                     const filtered = nextMessages.filter((message) => !message.content.includes("clock tick"));
                     const previous = knownMessages.current;
@@ -184,7 +197,12 @@ export function useChannelChat(id: number, account: Account | null) {
                             setArrival({ sequence: ++arrivalSequence.current, source: "poll", ids });
                     }
                 }
-                if (nextKey !== null) setKeyState(nextKey);
+                if (nextKey !== null) {
+                    mergeKeyEvents(nextKey);
+                    setKeyReady(true);
+                }
+                if (messagesResult.status === "rejected") throw messagesResult.reason;
+                if (keyResult.status === "rejected") throw keyResult.reason;
             };
 
             function scheduleRetry(loadMessages: boolean, loadKey: boolean, cause: unknown) {
@@ -256,21 +274,44 @@ export function useChannelChat(id: number, account: Account | null) {
                         const mainChanged = events.some((event) => event.channelId === id);
                         const keyChanged = technicalId !== null &&
                             events.some((event) => event.channelId === technicalId);
+                        if (keyChanged) {
+                            const created = events.filter((event) =>
+                                event.channelId === technicalId &&
+                                event.operation === "message.created" && event.message,
+                            ).map((event) => event.message!);
+                            if (created.length) mergeKeyEvents(created);
+                        }
                         if (mainChanged || keyChanged) syncOrReport(mainChanged, keyChanged);
                     },
                     onFallback: () => syncOrReport(true, technicalId !== null),
                 },
             );
+            const refreshDay = () => {
+                const today = parisDay(new Date());
+                if (today === currentKeyDay) return;
+                currentKeyDay = today;
+                keyEventsRef.current = mergeKeyMessages([], keyEventsRef.current);
+                setKeyState(keyStateFromMessages(keyEventsRef.current));
+                setKeyReady(true);
+                if (navigator.onLine && document.visibilityState === "visible")
+                    syncOrReport(false, true);
+            };
             const scheduleMidnight = () => {
                 midnightTimer = setTimeout(() => {
                     if (!active) return;
-                    setKeyState(AVAILABLE_KEY);
-                    if (navigator.onLine && document.visibilityState === "visible")
-                        syncOrReport(false, true);
+                    refreshDay();
                     scheduleMidnight();
                 }, untilParisMidnight());
             };
-            if (technicalId !== null) scheduleMidnight();
+            if (technicalId !== null) {
+                document.addEventListener("visibilitychange", refreshDay);
+                window.addEventListener("online", refreshDay);
+                stopDayListeners = () => {
+                    document.removeEventListener("visibilitychange", refreshDay);
+                    window.removeEventListener("online", refreshDay);
+                };
+                scheduleMidnight();
+            }
             await requestSync(true, technicalId !== null);
             if (active) setLoading(false);
         };
@@ -282,14 +323,17 @@ export function useChannelChat(id: number, account: Account | null) {
             });
         return () => {
             active = false;
+            if (keySessionRef.current === session) keySessionRef.current++;
+            keyActionPending.current = false;
             stopSocket?.();
+            stopDayListeners?.();
             if (midnightTimer !== null) clearTimeout(midnightTimer);
             if (retryTimer !== null) clearTimeout(retryTimer);
             waiters.forEach(({ resolve }) => resolve());
             waiters = [];
             requestSyncRef.current = null;
         };
-    }, [account, channel?.id, hasKey, handleError, id]);
+    }, [account, channel?.id, hasKey, handleError, id, mergeKeyEvents]);
 
     async function submit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -326,16 +370,32 @@ export function useChannelChat(id: number, account: Account | null) {
     }
 
     async function toggleKey() {
-        if (!hasKey || !account || keyChannelId === null || keyBusy) return;
+        if (!hasKey || !account || keyChannelId === null || !keyReady ||
+            keyActionPending.current) return;
+        const session = keySessionRef.current;
+        const expectedHolderId = keyState.holderId;
+        keyActionPending.current = true;
         setKeyBusy(true);
         setError("");
         try {
-            setKeyState(await toggleKeyState(keyChannelId, account, keyState));
+            const current = mergeKeyEvents(await readKeyMessages(keyChannelId));
+            if (keySessionRef.current !== session || current.holderId !== expectedHolderId ||
+                (current.holderId !== null && current.holderId !== account.id)) return;
+            const action = current.holderId === null ? "claim" : "release";
+            const sent = await sendKeyAction(keyChannelId, action);
+            if (keySessionRef.current !== session) return;
+            mergeKeyEvents([sent]);
             await requestSyncRef.current?.(false, true);
         } catch (cause) {
-            handleError(cause, "Mise à jour de la clé impossible.");
+            if (keySessionRef.current === session) {
+                handleError(cause, "Mise à jour de la clé impossible.");
+                void requestSyncRef.current?.(false, true).catch(() => {});
+            }
         } finally {
-            setKeyBusy(false);
+            if (keySessionRef.current === session) {
+                keyActionPending.current = false;
+                setKeyBusy(false);
+            }
         }
     }
 
@@ -347,6 +407,7 @@ export function useChannelChat(id: number, account: Account | null) {
         loading,
         keyChannelId,
         keyState,
+        keyReady,
         content,
         setContent,
         busy,
