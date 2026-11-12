@@ -175,6 +175,10 @@ func (amw *authenticationMiddleware) authMiddleware(next http.Handler) http.Hand
 			return
 		}
 		tokenStr := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+
+		if tokenStr == "" {
+			tokenStr = r.URL.Query().Get("authorization")
+		}
 		if tokenStr == "" {
 			log.Printf("No token")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
