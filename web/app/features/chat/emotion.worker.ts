@@ -13,7 +13,7 @@ self.onmessage = (event: MessageEvent<{ id: number; text: string }>) => {
         try {
             const result = await (await classifier)(text, { top_k: 28 });
             const scores = Array.isArray(result) ? result.flat() : [result];
-            self.postMessage({ id, emotion: selectEmotion(scores) });
+            self.postMessage({ id, emotion: selectEmotion(scores, text) });
         } catch (cause) {
             self.postMessage({
                 id,

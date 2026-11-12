@@ -30,19 +30,41 @@ function message(id: number, emotion?: string, content = "Bonjour"): Message {
 
 beforeEach(() => window.localStorage.clear());
 
-it("selects a confident emotion and defaults to neutral below 0.5", () => {
+it("selects the highest model score without a confidence threshold", () => {
     expect(selectEmotion([{ label: "anger", score: 0.49 }, { label: "joy", score: 0.48 }]))
-        .toBe("neutral");
+        .toBe("anger");
     expect(selectEmotion([{ label: "anger", score: 0.5 }, { label: "joy", score: 0.4 }]))
         .toBe("anger");
     expect(selectEmotion([{ label: "anger", score: 0.7 }, { label: "joy", score: 0.7 }]))
         .toBe("joy");
     expect(selectEmotion([{ label: "unknown", score: 1 }, { label: "sadness", score: 0.6 }]))
         .toBe("sadness");
+    expect(selectEmotion([{ label: "neutral", score: 0.4 }, { label: "sadness", score: 0.2 }]))
+        .toBe("neutral");
     expect(emotionMode("confusion")).toBe("minor");
     expect(emotionMode("surprise")).toBe("minor");
     expect(emotionMode("neutral")).toBe("major");
     expect(messageEmotion(message(1, "fear"))).toBe("fear");
+});
+
+it("uses clear negative French cues when the model favors a positive emotion", () => {
+    const positiveScores = [{ label: "joy", score: 0.9 }, { label: "sadness", score: 0.1 }];
+    expect(selectEmotion(positiveScores, "moi aussi sur fâché méga pas content")).toBe("disapproval");
+    expect(selectEmotion(positiveScores, "pas gentil")).toBe("disapproval");
+    expect(selectEmotion(positiveScores, "Elle est en train de pleurer")).toBe("sadness");
+    expect(selectEmotion(positiveScores, "Je ne suis pas triste")).toBe("joy");
+    expect(selectEmotion(positiveScores, "Elle ne pleure plus")).toBe("joy");
+});
+
+it("keeps a working feature positive despite negative model scores", () => {
+    const negativeScores = [{ label: "annoyance", score: 0.8 }, { label: "approval", score: 0.2 }];
+    expect(selectEmotion(negativeScores,
+        "j'ai l'impression que les émotions marchent j'arrête de vous emmerder",
+    )).toBe("approval");
+    expect(selectEmotion(negativeScores, "Les émotions marchent pas")).toBe("annoyance");
+    expect(selectEmotion(negativeScores, "Je marche dans la rue")).toBe("annoyance");
+    expect(selectEmotion(negativeScores, "Les émotions marchent, mais je suis triste"))
+        .toBe("sadness");
 });
 
 it("caches a missing emotion by message content and model revision", () => {
