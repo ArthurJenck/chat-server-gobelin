@@ -9,8 +9,12 @@ import { renderApp } from "./render-app";
 import { server } from "./setup";
 
 const playback = vi.hoisted(() => ({ start: vi.fn() }));
+const emotionClassifier = vi.hoisted(() => ({ classify: vi.fn() }));
 vi.mock("../app/features/sound/audioEngine", () => ({
     startPlayback: playback.start,
+}));
+vi.mock("../app/features/chat/emotionClient", () => ({
+    classifyEmotion: emotionClassifier.classify,
 }));
 
 const api = "http://localhost:4000";
@@ -34,6 +38,8 @@ const account: Account = {
 beforeEach(() => {
     playback.start.mockReset();
     playback.start.mockResolvedValue(vi.fn());
+    emotionClassifier.classify.mockReset();
+    emotionClassifier.classify.mockRejectedValue(new Error("Modèle indisponible"));
 });
 
 async function signIn() {
@@ -58,6 +64,57 @@ function mockLogin(current: Account = account) {
 }
 
 describe("Harmonie", () => {
+    it("plays a negative message in minor on the page tonic", async () => {
+        mockLogin();
+        setToken("test-token");
+        server.use(http.get(`${api}/channel/message`, ({ request }) => HttpResponse.json(
+            new URL(request.url).searchParams.get("channel") === "9" ? [] : [{
+                id: 1,
+                content: "Coucou",
+                user_id: 2,
+                user: "Zoe",
+                creation_date: new Date().toISOString(),
+                metadata: { harmonie: { music_root: 2, music_mode: "major", emotion: "sadness" } },
+            }],
+        )));
+        renderApp("/channels/5");
+        await userEvent.click(await screen.findByRole("button", { name: "Lire le message" }));
+        await waitFor(() => expect(playback.start).toHaveBeenCalledWith(
+            expect.objectContaining({ tonicMidi: expect.any(Number) }),
+            expect.objectContaining({ root: 2, mode: "minor" }),
+            expect.any(Function),
+        ));
+    });
+
+    it("sends the detected emotion without changing the conversation key", async () => {
+        mockLogin();
+        setToken("test-token");
+        emotionClassifier.classify.mockResolvedValue("sadness");
+        let sent: unknown;
+        server.use(
+            http.get(`${api}/channel/message`, () => HttpResponse.json([])),
+            http.post(`${api}/channel/message`, async ({ request }) => {
+                sent = await request.json();
+                return HttpResponse.json({ id: 1 });
+            }),
+        );
+        renderApp("/channels/5");
+        await screen.findByRole("heading", { name: "general" });
+        await userEvent.type(screen.getByLabelText("Message"), "Je suis triste");
+        await userEvent.click(screen.getByRole("button", { name: "Envoyer" }));
+        await waitFor(() => expect(sent).toEqual({
+            channel: 5,
+            content: "Je suis triste",
+            metadata: {
+                instrument: "guitar",
+                music_root: 0,
+                music_mode: "major",
+                emotion: "sadness",
+            },
+        }));
+        expect(emotionClassifier.classify).toHaveBeenCalledWith("Je suis triste");
+    });
+
     it("requires a session", async () => {
         renderApp("/");
         expect(

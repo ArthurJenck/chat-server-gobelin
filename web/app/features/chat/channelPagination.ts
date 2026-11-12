@@ -3,6 +3,7 @@ import { withInstrumentProfile, DEFAULT_SOUND_SETTINGS } from "../sound/soundCon
 import { createSoundPlan, type SoundPlan } from "../sound/soundPlan";
 import { layoutSoundStaff } from "../sound/visual/staffLayout";
 import { messageInstrument } from "./messageSound";
+import { emotionMode, messageEmotion, type EmotionMode } from "./emotion";
 import {
     DEFAULT_MUSIC_KEY,
     isConversationRest,
@@ -33,6 +34,7 @@ export type ChannelStaffBlock = {
     rowIndex: number;
     musicKey: MusicKey;
     pageKey: MusicKey;
+    mode: EmotionMode;
 };
 
 export function buildChannelStaffs(messages: Message[], availableWidth: number) {
@@ -45,8 +47,9 @@ export function buildChannelStaffs(messages: Message[], availableWidth: number) 
         )
         .flatMap((message, messageIndex) => {
             musicKey = messageMusicKey(message) ?? musicKey;
+            const mode = emotionMode(messageEmotion(message));
             const settings = withInstrumentProfile(
-                { ...CHANNEL_SOUND_SETTINGS, ...musicKey },
+                { ...CHANNEL_SOUND_SETTINGS, ...musicKey, mode },
                 messageInstrument(message),
             );
             const silent = isConversationRest(message);
@@ -65,6 +68,7 @@ export function buildChannelStaffs(messages: Message[], availableWidth: number) 
                 rowIndex,
                 musicKey,
                 pageKey: musicKey,
+                mode,
             }));
         });
 }
@@ -76,7 +80,7 @@ export function applyPageMusicKeys(pages: ChannelStaffBlock[][], availableWidth:
         return page.map((block) => {
             if (isConversationRest(block.message)) return { ...block, pageKey };
             const settings = withInstrumentProfile(
-                { ...CHANNEL_SOUND_SETTINGS, ...pageKey },
+                { ...CHANNEL_SOUND_SETTINGS, ...pageKey, mode: block.mode },
                 messageInstrument(block.message),
             );
             const plan = createSoundPlan(block.message.content, settings);
@@ -85,6 +89,19 @@ export function applyPageMusicKeys(pages: ChannelStaffBlock[][], availableWidth:
             return { ...block, pageKey, plan, row };
         });
     });
+}
+
+export function pageGradientKey(page: ChannelStaffBlock[]): MusicKey {
+    const root = page.at(-1)?.pageKey.root ?? DEFAULT_MUSIC_KEY.root;
+    const messages = new Map<string, EmotionMode>();
+    for (const block of page) {
+        if (isConversationRest(block.message)) continue;
+        const identity = block.message.id ??
+            `${block.message.creation_date}-${block.message.user_id}-${block.message.content}`;
+        messages.set(String(identity), block.mode);
+    }
+    const minor = [...messages.values()].filter((mode) => mode === "minor").length;
+    return { root, mode: minor > messages.size - minor ? "minor" : "major" };
 }
 
 export function paginateChannelStaffs(

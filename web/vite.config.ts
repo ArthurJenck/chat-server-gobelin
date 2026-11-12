@@ -14,6 +14,7 @@ export default defineConfig({
                 navigateFallback: null,
                 skipWaiting: true,
                 clientsClaim: true,
+                globIgnores: ["**/ort-wasm-*.wasm"],
                 runtimeCaching: [
                     {
                         urlPattern: ({ request }) =>

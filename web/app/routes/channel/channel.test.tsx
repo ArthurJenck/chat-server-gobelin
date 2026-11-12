@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setToken } from "../../features/auth/token";
 import { buildChannelStaffs, paginateChannelStaffs } from "../../features/chat/channelPagination";
 import type { Message } from "../../features/messages/types";
@@ -10,6 +10,16 @@ import { renderApp } from "../../../test/render-app";
 import { server } from "../../../test/setup";
 
 const api = "http://localhost:4000";
+const emotionClassifier = vi.hoisted(() => ({ classify: vi.fn() }));
+vi.mock("../../features/chat/emotionClient", () => ({
+    classifyEmotion: emotionClassifier.classify,
+}));
+
+beforeEach(() => {
+    emotionClassifier.classify.mockReset();
+    emotionClassifier.classify.mockRejectedValue(new Error("Modèle indisponible"));
+});
+
 const account: Account = {
     id: 1,
     username: "Alice",
@@ -88,6 +98,77 @@ describe("Channel page", () => {
             configurable: true,
             get() { return this.classList.contains("channel-messages") ? 360 : 0; },
         });
+    });
+
+    it("classifies an old message once and reuses its local result", async () => {
+        emotionClassifier.classify.mockResolvedValue("sadness");
+        mockChannel([message(1, "Je suis triste")]);
+        const first = renderApp("/channels/5");
+        await waitFor(() => expect(document.querySelector(".channel-message"))
+            .toHaveStyle({ "--channel-key-color": "#FF0004" }));
+        expect(emotionClassifier.classify).toHaveBeenCalledOnce();
+        first.unmount();
+        emotionClassifier.classify.mockClear();
+
+        renderApp("/channels/5");
+        await waitFor(() => expect(document.querySelector(".channel-message"))
+            .toHaveStyle({ "--channel-key-color": "#FF0004" }));
+        expect(emotionClassifier.classify).not.toHaveBeenCalled();
+    });
+
+    it("uses a saved emotion without reclassifying the message", async () => {
+        mockChannel([{
+            ...message(1, "J'ai peur"),
+            metadata: { harmonie: { music_root: 0, music_mode: "major", emotion: "fear" } },
+        }]);
+        renderApp("/channels/5");
+        await waitFor(() => expect(document.querySelector(".channel-message"))
+            .toHaveStyle({ "--channel-key-color": "#FF0004" }));
+        expect(emotionClassifier.classify).not.toHaveBeenCalled();
+    });
+
+    it("changes the gradient with the visible page's emotion", async () => {
+        messageAreaHeight = 120;
+        mockChannel([
+            {
+                ...message(1, "Merci"),
+                metadata: { harmonie: { music_root: 0, music_mode: "major", emotion: "joy" } },
+            },
+            {
+                ...message(2, "J'ai peur"),
+                metadata: { harmonie: { music_root: 0, music_mode: "major", emotion: "fear" } },
+            },
+        ]);
+        renderApp("/channels/5");
+        await waitFor(() => expect(document.querySelectorAll(".channel-sheet")).toHaveLength(2));
+        await waitFor(() => expect(document.querySelector(".channel-page"))
+            .toHaveStyle({ "--channel-key-color": "#FF0004" }));
+        const scroller = screen.getByRole("region", { name: "Messages" });
+        scroller.scrollLeft = 0;
+        fireEvent.scroll(scroller);
+        await waitFor(() => expect(document.querySelector(".channel-page"))
+            .toHaveStyle({ "--channel-key-color": "#4DF8E7" }));
+    });
+
+    it("waits for a page to become visible before classifying its old messages", async () => {
+        messageAreaHeight = 120;
+        emotionClassifier.classify.mockResolvedValue("fear");
+        mockChannel([
+            message(1, "Ancien"),
+            {
+                ...message(2, "Récent"),
+                metadata: { harmonie: { music_root: 0, music_mode: "major", emotion: "joy" } },
+            },
+        ]);
+        renderApp("/channels/5");
+        await waitFor(() => expect(document.querySelectorAll(".channel-sheet")).toHaveLength(2));
+        expect(emotionClassifier.classify).not.toHaveBeenCalled();
+        const scroller = screen.getByRole("region", { name: "Messages" });
+        scroller.scrollLeft = 0;
+        fireEvent.scroll(scroller);
+        await waitFor(() => expect(emotionClassifier.classify).toHaveBeenCalledWith("Ancien"));
+        await waitFor(() => expect(document.querySelector(".channel-page"))
+            .toHaveStyle({ "--channel-key-color": "#FF0004" }));
     });
 
     afterEach(() => {

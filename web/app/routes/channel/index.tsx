@@ -13,8 +13,8 @@ export default function ChannelPage() {
     const id = Number(channelId);
     const { account, loading: accountLoading, error: accountError } = useAccount();
     const {
-        channel, hasKey, messages, loading, keyChannelId, keyState, content,
-        setContent, busy, keyBusy, error, submit, toggleKey,
+        channel, hasKey, messages, setVisibleMessages, loading, keyChannelId, keyState, content,
+        setContent, busy, classifying, keyBusy, error, submit, toggleKey,
     } = useChannelChat(id, account);
     const textarea = useRef<HTMLTextAreaElement>(null);
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
@@ -77,7 +77,13 @@ export default function ChannelPage() {
                 <p className="channel-status">Chargement des messages…</p>
             )}
             {(accountError || error) && <p className="channel-status" role="alert">{accountError || error}</p>}
-            <ChannelPages messages={messages} userId={account?.id ?? null} onKeyChange={setActiveMusicKey} />
+            {classifying && <p className="channel-status" role="status">Analyse de l’émotion…</p>}
+            <ChannelPages
+                messages={messages}
+                userId={account?.id ?? null}
+                onKeyChange={setActiveMusicKey}
+                onVisibleMessagesChange={setVisibleMessages}
+            />
             {channel && (
                 <form className="channel-composer" onSubmit={(event) => void submit(event)}>
                     <label className="channel-screen-reader" htmlFor="message-content">Message</label>

@@ -4,7 +4,7 @@ import { startPlayback } from "../sound/audioEngine";
 import { withInstrumentProfile } from "../sound/soundConfig";
 import { CHANNEL_SOUND_SETTINGS, type ChannelStaffBlock } from "./channelPagination";
 import { messageInstrument } from "./messageSound";
-import { isConversationRest } from "./conversationMusic";
+import { isConversationRest, musicColor } from "./conversationMusic";
 
 export default function MessageItem({
     block,
@@ -16,8 +16,8 @@ export default function MessageItem({
     const { message, plan, row, first } = block;
     const silent = isConversationRest(message);
     const settings = useMemo(
-        () => withInstrumentProfile({ ...CHANNEL_SOUND_SETTINGS, ...block.pageKey }, messageInstrument(message)),
-        [message, block.pageKey],
+        () => withInstrumentProfile({ ...CHANNEL_SOUND_SETTINGS, ...block.pageKey, mode: block.mode }, messageInstrument(message)),
+        [message, block.pageKey, block.mode],
     );
     const [playing, setPlaying] = useState(false);
     const [error, setError] = useState("");
@@ -61,7 +61,10 @@ export default function MessageItem({
     }
 
     return (
-        <li className="channel-message">
+        <li
+            className="channel-message"
+            style={{ "--channel-key-color": musicColor({ root: block.pageKey.root, mode: block.mode }) } as React.CSSProperties}
+        >
             {first && !silent && (
                 <div className={`channel-message-author${isOwn ? " channel-message-author-own" : ""}`}>
                     <span>{isOwn ? "Moi" : message.user}</span>

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
     KEY_CHANNEL_NAME,
     MESSAGE_REFRESH_MS,
+    NAMESPACE,
     PATHS,
 } from "../../shared/config";
 import { ApiError } from "../../shared/http/ApiError";
+import { metadataForProject } from "../../shared/projectMetadata";
 import {
     ensureKeyChannel,
     readKeyState,
@@ -16,7 +18,10 @@ import { getMessages, sendMessage } from "../messages/api";
 import type { Message } from "../messages/types";
 import { accountInstrument } from "../users/instrument";
 import type { Account } from "../users/types";
-import { latestMusicKey, publishDueConversationRest } from "./conversationMusic";
+import { isConversationRest, latestMusicKey, publishDueConversationRest } from "./conversationMusic";
+import { emotionCacheKey, readCachedEmotion, writeCachedEmotion } from "./emotionCache";
+import { classifyEmotion } from "./emotionClient";
+import { messageEmotion, type Emotion } from "./emotion";
 
 const AVAILABLE_KEY: KeyState = { holderId: null, holderName: null };
 
@@ -27,13 +32,67 @@ export function useChannelChat(id: number, account: Account | null) {
     );
     const hasKey = channel?.name === "general";
     const [messages, setMessages] = useState<Message[]>([]);
+    const [visiblePage, setVisiblePage] = useState<{ channelId: number; messages: Message[] }>({
+        channelId: id,
+        messages: [],
+    });
     const [keyChannelId, setKeyChannelId] = useState<number | null>(null);
     const [keyState, setKeyState] = useState<KeyState>(AVAILABLE_KEY);
     const [loading, setLoading] = useState(true);
     const [content, setContent] = useState("");
     const [busy, setBusy] = useState(false);
+    const [classifying, setClassifying] = useState(false);
     const [keyBusy, setKeyBusy] = useState(false);
     const [error, setError] = useState("");
+    const [localEmotions, setLocalEmotions] = useState<Record<string, Emotion>>({});
+    const pendingEmotions = useRef(new Set<string>());
+    const failedEmotions = useRef(new Set<string>());
+    const setVisibleMessages = useCallback((pageMessages: Message[]) => {
+        setVisiblePage({ channelId: id, messages: pageMessages });
+    }, [id]);
+
+    const displayMessages = useMemo(() => messages.map((message) => {
+        if (isConversationRest(message) || messageEmotion(message)) return message;
+        const key = emotionCacheKey(id, message);
+        const emotion = localEmotions[key] ?? readCachedEmotion(key);
+        if (!emotion) return message;
+        return {
+            ...message,
+            metadata: {
+                ...message.metadata,
+                [NAMESPACE]: { ...metadataForProject(message.metadata), emotion },
+            },
+        };
+    }), [id, localEmotions, messages]);
+
+    useEffect(() => {
+        if (visiblePage.channelId !== id) return;
+        let active = true;
+        const missing = [...visiblePage.messages].sort((a, b) =>
+            Date.parse(b.creation_date) - Date.parse(a.creation_date),
+        );
+        void (async () => {
+            for (const message of missing) {
+                if (!active) break;
+                if (isConversationRest(message) || messageEmotion(message)) continue;
+                const key = emotionCacheKey(id, message);
+                if (readCachedEmotion(key) || pendingEmotions.current.has(key) ||
+                    failedEmotions.current.has(key)) continue;
+                pendingEmotions.current.add(key);
+                try {
+                    const emotion = await classifyEmotion(message.content);
+                    if (!active) break;
+                    writeCachedEmotion(key, emotion);
+                    setLocalEmotions((current) => ({ ...current, [key]: emotion }));
+                } catch {
+                    failedEmotions.current.add(key);
+                } finally {
+                    pendingEmotions.current.delete(key);
+                }
+            }
+        })();
+        return () => { active = false; };
+    }, [id, visiblePage]);
 
     function handleError(cause: unknown, fallback: string) {
         if (cause instanceof ApiError && cause.status === 401)
@@ -99,12 +158,22 @@ export function useChannelChat(id: number, account: Account | null) {
         setBusy(true);
         setError("");
         try {
+            let emotion: Emotion | null = null;
+            setClassifying(true);
+            try {
+                emotion = await classifyEmotion(text);
+            } catch {
+                emotion = null;
+            } finally {
+                setClassifying(false);
+            }
             await publishDueConversationRest(id).catch(() => false);
             const key = latestMusicKey(await getMessages(id));
             await sendMessage(id, text, {
                 instrument,
                 music_root: key.root,
                 music_mode: key.mode,
+                ...(emotion ? { emotion } : {}),
             });
             setContent("");
             await refresh(keyChannelId);
@@ -131,13 +200,15 @@ export function useChannelChat(id: number, account: Account | null) {
     return {
         channel,
         hasKey,
-        messages,
+        messages: displayMessages,
+        setVisibleMessages,
         loading,
         keyChannelId,
         keyState,
         content,
         setContent,
         busy,
+        classifying,
         keyBusy,
         error,
         submit,

@@ -2,18 +2,20 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MessageItem from "../../features/chat/MessageItem";
-import { applyPageMusicKeys, buildChannelStaffs, paginateChannelStaffs } from "../../features/chat/channelPagination";
-import { DEFAULT_MUSIC_KEY, musicColor, type MusicKey } from "../../features/chat/conversationMusic";
+import { applyPageMusicKeys, buildChannelStaffs, pageGradientKey, paginateChannelStaffs } from "../../features/chat/channelPagination";
+import { musicColor, type MusicKey } from "../../features/chat/conversationMusic";
 import type { Message } from "../../features/messages/types";
 
 export default function ChannelPages({
     messages,
     userId,
     onKeyChange,
+    onVisibleMessagesChange,
 }: {
     messages: Message[];
     userId: number | null;
     onKeyChange: (key: MusicKey) => void;
+    onVisibleMessagesChange: (messages: Message[]) => void;
 }) {
     const scroller = useRef<HTMLElement>(null);
     const sheets = useRef<(HTMLOListElement | null)[]>([]);
@@ -26,8 +28,19 @@ export default function ChannelPages({
     ), [blocks, size.height, size.width]);
 
     useEffect(() => {
-        onKeyChange(pages[activePage]?.at(-1)?.pageKey ?? DEFAULT_MUSIC_KEY);
+        onKeyChange(pageGradientKey(pages[activePage] ?? []));
     }, [activePage, onKeyChange, pages]);
+
+    useEffect(() => {
+        const unique = new Map<string, Message>();
+        for (const block of pages[activePage] ?? []) {
+            const message = block.message;
+            const identity = message.id ??
+                `${message.creation_date}-${message.user_id}-${message.content}`;
+            unique.set(String(identity), message);
+        }
+        onVisibleMessagesChange([...unique.values()]);
+    }, [activePage, onVisibleMessagesChange, pages]);
 
     useEffect(() => {
         setActivePage((current) => Math.min(current, pages.length - 1));
@@ -159,7 +172,7 @@ export default function ChannelPages({
                             ref={(node) => { sheets.current[pageIndex] = node; }}
                             className="channel-sheet"
                             style={{ zIndex: pages.length - pageIndex,
-                                "--channel-key-color": musicColor(page.at(-1)?.pageKey ?? DEFAULT_MUSIC_KEY),
+                                "--channel-key-color": musicColor(pageGradientKey(page)),
                             } as React.CSSProperties}
                             aria-hidden={pageIndex !== activePage}
                             inert={pageIndex !== activePage}
