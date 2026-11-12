@@ -74,6 +74,7 @@ export default function MessageItem({
             {first && !silent && (
                 <div
                     className={`channel-message-author${isOwn ? " channel-message-author-own" : ""}`}
+                    data-user-id={message.user_id}
                 >
                     <span>{isOwn ? "Moi" : message.user}</span>
                     {isOwn && <img src="/pictos/note.svg" alt="" />}

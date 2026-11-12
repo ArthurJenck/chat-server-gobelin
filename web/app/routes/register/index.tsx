@@ -31,13 +31,14 @@ export default function Register() {
         <main className="auth-page register-page">
             <div className="auth-content">
                 <h1>S’inscrire</h1>
-                {error && <p role="alert">{error}</p>}
+                {error && <p id="register-error" role="alert">{error}</p>}
                 <AuthForm
                     mode="register"
                     username={username}
                     password={password}
                     confirmation={confirmation}
                     busy={false}
+                    passwordMismatch={Boolean(error)}
                     onUsernameChange={setUsername}
                     onPasswordChange={setPassword}
                     onConfirmationChange={setConfirmation}

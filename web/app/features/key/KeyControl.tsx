@@ -13,7 +13,6 @@ export default function KeyControl({
     ready: boolean;
     onChange: () => void;
 }) {
-    const isOwn = state.holderId === userId;
     return (
         <div className="channel-key-control">
             <label className="channel-key-label">
@@ -28,8 +27,9 @@ export default function KeyControl({
                     onChange={onChange}
                 />
                 <img className="channel-key-star" src="/pictos/star.svg" alt="" />
-                {ready && (state.holderId === null || isOwn) && (
-                    <img className="channel-key-symbol" src="/pictos/key.svg" alt="" />
+                {ready && (
+                    <img className="channel-key-symbol" src="/pictos/key.svg" alt=""
+                        style={{ visibility: state.holderId === null ? "visible" : "hidden" }} />
                 )}
             </label>
             <span className="channel-screen-reader" role="status">

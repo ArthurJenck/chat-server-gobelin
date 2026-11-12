@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import KeyControl from "../app/features/key/KeyControl";
 
-it("shows the key only when available or owned and disables actions while loading or busy", () => {
+it("shows the key only when available and disables actions while loading or busy", () => {
     const onChange = vi.fn();
     const { rerender, container } = render(
         <KeyControl state={{ holderId: null, holderName: null }} userId={1}
@@ -21,12 +21,12 @@ it("shows the key only when available or owned and disables actions while loadin
         ready busy onChange={onChange} />);
     expect(checkbox).toBeChecked();
     expect(checkbox).toBeDisabled();
-    expect(container.querySelector(".channel-key-symbol")).toBeInTheDocument();
+    expect(container.querySelector(".channel-key-symbol")).not.toBeVisible();
 
     rerender(<KeyControl state={{ holderId: 2, holderName: "Louis" }} userId={1}
         ready busy={false} onChange={onChange} />);
     expect(checkbox).toBeDisabled();
-    expect(container.querySelector(".channel-key-symbol")).toBeNull();
+    expect(container.querySelector(".channel-key-symbol")).not.toBeVisible();
     expect(screen.getByText("Clé détenue par Louis")).toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
 });

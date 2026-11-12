@@ -122,6 +122,18 @@
     height: 78px;
 }
 
+.channel-key-flight {
+    position: fixed;
+    z-index: 20;
+    pointer-events: none;
+    transform-origin: 50% 100%;
+    will-change: transform;
+}
+
+.channel-page[data-key-flying="true"] .channel-author-key {
+    visibility: hidden;
+}
+
 .channel-messages {
     position: relative;
     min-height: 0;

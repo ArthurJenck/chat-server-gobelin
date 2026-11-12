@@ -25,7 +25,7 @@ export default function Home() {
         setScrollIndicatorTop(
             remaining > 0
                 ? Math.min(1, Math.max(0, scrollArea.scrollTop / remaining)) *
-                  Math.max(0, scrollArea.clientHeight - 40)
+                      Math.max(0, scrollArea.clientHeight - 40)
                 : 0,
         );
     }
@@ -47,15 +47,28 @@ export default function Home() {
     return (
         <main className="home-page">
             <nav className="home-actions" aria-label="Actions principales">
-                <Link className="home-profile" to={PATHS.profile} aria-label="Profil">
+                <Link
+                    className="home-profile"
+                    to={PATHS.profile}
+                    aria-label="Profil"
+                >
                     <img src="/pictos/profile.svg" alt="" />
                 </Link>
-                <Link className="home-add" to={PATHS.newChannel} aria-label="Ajouter un groupe">
-                    <span className="home-add-icon home-add-icon-blur" aria-hidden="true" />
+                <Link
+                    className="home-add"
+                    to={PATHS.newChannel}
+                    aria-label="Ajouter un groupe"
+                >
+                    <span
+                        className="home-add-icon home-add-icon-blur"
+                        aria-hidden="true"
+                    />
                     <span className="home-add-icon" aria-hidden="true" />
                 </Link>
             </nav>
-            <h1 className="home-title" id="home-title">Mes partitions</h1>
+            <h1 className="home-title" id="home-title">
+                Mes partitions
+            </h1>
             {loading && <p>Chargement des groupes…</p>}
             {error && <p role="alert">{error}</p>}
             {account && channels.length === 0 && <p>Aucun groupe.</p>}
@@ -75,11 +88,16 @@ export default function Home() {
                                     className={`home-notebook home-notebook--${notebookTones[index % notebookTones.length]}`}
                                     key={channel.id}
                                 >
-                                    <Link className="home-notebook-link" to={PATHS.channel(channel.id)}>
+                                    <Link
+                                        className="home-notebook-link"
+                                        to={PATHS.channel(channel.id)}
+                                    >
                                         <span
                                             className="home-notebook-art"
                                             aria-hidden="true"
-                                            dangerouslySetInnerHTML={{ __html: notebookSvg }}
+                                            dangerouslySetInnerHTML={{
+                                                __html: notebookSvg,
+                                            }}
                                         />
                                         <img
                                             className="home-notebook-group"
@@ -87,7 +105,9 @@ export default function Home() {
                                             alt=""
                                             aria-hidden="true"
                                         />
-                                        <span className="home-notebook-name">{channel.name}</span>
+                                        <span className="home-notebook-name">
+                                            {channel.name}
+                                        </span>
                                     </Link>
                                 </li>
                             ))}

@@ -40,6 +40,9 @@ describe("Register page", () => {
         await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
 
         expect(screen.getByRole("alert")).toHaveTextContent("Les mots de passe sont différents");
+        expect(screen.getByLabelText("Nom d’utilisateur :")).not.toHaveAttribute("aria-invalid");
+        expect(screen.getByLabelText("Mot de passe :")).toHaveAttribute("aria-invalid", "true");
+        expect(screen.getByLabelText("Confirmer le mot de passe :")).toHaveAttribute("aria-invalid", "true");
         expect(requests).toBe(0);
     });
 

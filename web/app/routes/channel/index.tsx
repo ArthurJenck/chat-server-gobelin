@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import { useAccount } from "../../features/auth/useAccount";
 import { useChannelChat } from "../../features/chat/useChannelChat";
 import KeyControl from "../../features/key/KeyControl";
+import KeyFlight from "../../features/key/KeyFlight";
 import { PATHS } from "../../shared/config";
 import ChannelPages from "./ChannelPages";
 import { createChannelAudioEngine, type ChannelAudioEngine } from "../../features/sound/channelAudioEngine";
@@ -41,6 +42,8 @@ export default function ChannelPage() {
         toggleKey,
     } = useChannelChat(id, account);
     const textarea = useRef<HTMLTextAreaElement>(null);
+    const page = useRef<HTMLElement>(null);
+    const [flyingHolderId, setFlyingHolderId] = useState<number | null>(null);
     const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null);
     const [activeMusicKey, setActiveMusicKey] = useState(DEFAULT_MUSIC_KEY);
     const largestViewportHeight = useRef<number | null>(null);
@@ -102,7 +105,9 @@ export default function ChannelPage() {
 
     return (
         <main
+            ref={page}
             className="channel-page"
+            data-key-flying={flyingHolderId !== null && flyingHolderId === keyState.holderId ? true : undefined}
             data-keyboard-open={
                 viewport !== null &&
                 viewport.height <
@@ -136,6 +141,10 @@ export default function ChannelPage() {
                     />
                 )}
             </header>
+            {hasKey && account && keyChannelId !== null && (
+                <KeyFlight key={id} pageRef={page} holderId={keyState.holderId}
+                    ready={keyReady} onFlyingChange={setFlyingHolderId} />
+            )}
             {(accountLoading || (channel && loading && !error)) && (
                 <p className="channel-status">Chargement des messages…</p>
             )}

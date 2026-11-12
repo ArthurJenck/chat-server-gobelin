@@ -12,6 +12,7 @@ type AuthFormProps = {
     confirmation?: string;
     busy: boolean;
     error?: boolean;
+    passwordMismatch?: boolean;
     onUsernameChange: (value: string) => void;
     onPasswordChange: (value: string) => void;
     onConfirmationChange?: (value: string) => void;
@@ -25,6 +26,7 @@ export default function AuthForm({
     confirmation,
     busy,
     error = false,
+    passwordMismatch = false,
     onUsernameChange,
     onPasswordChange,
     onConfirmationChange,
@@ -61,8 +63,8 @@ export default function AuthForm({
                         }
                         placeholder="*****"
                         value={password}
-                        invalid={error}
-                        aria-describedby={error ? "login-error" : undefined}
+                        invalid={error || passwordMismatch}
+                        aria-describedby={error ? "login-error" : passwordMismatch ? "register-error" : undefined}
                         onChange={(event) =>
                             onPasswordChange(event.target.value)
                         }
@@ -84,6 +86,8 @@ export default function AuthForm({
                         autoComplete="new-password"
                         placeholder="*****"
                         value={confirmation ?? ""}
+                        invalid={passwordMismatch}
+                        aria-describedby={passwordMismatch ? "register-error" : undefined}
                         onChange={(event) =>
                             onConfirmationChange?.(event.target.value)
                         }
