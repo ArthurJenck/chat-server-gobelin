@@ -43,7 +43,7 @@ export default function ChannelPages({
     const navigation = useRef<{ glissFrom: number; gliss: boolean; sentIds: string[] | null } | null>(null);
     const initialPlayed = useRef(false);
     const handledArrival = useRef(0);
-    const [size, setSize] = useState({ width: 360, height: 600 });
+    const [size, setSize] = useState({ width: 360, height: 600, top: 0, left: 0, containerWidth: 400, containerHeight: 650 });
     const [sizeReady, setSizeReady] = useState(false);
     const [activePage, setActivePage] = useState(0);
     const playback = useChannelPlayback(audio);
@@ -127,6 +127,7 @@ export default function ChannelPages({
             gsap.set(sheet, {
                 rotateY: (180 - index / 2) * turn,
                 z: front + (back - front) * depth,
+                transformPerspective: 1200,
             });
             const hidden = index !== current;
             sheet.inert = hidden;
@@ -229,11 +230,19 @@ export default function ChannelPages({
         const element = container.current;
         if (!element) return;
         const update = () => {
+            const rect = element.getBoundingClientRect();
             const width = Math.max(1, (element.clientWidth || 400) - 40);
             const height = Math.max(1, (element.clientHeight || 650) - 50);
-            setSize((current) => current.width === width && current.height === height
+            const next = {
+                width, height, top: rect.top, left: rect.left,
+                containerWidth: element.clientWidth || 400,
+                containerHeight: element.clientHeight || 650,
+            };
+            setSize((current) => current.width === next.width && current.height === next.height &&
+                current.top === next.top && current.left === next.left &&
+                current.containerWidth === next.containerWidth && current.containerHeight === next.containerHeight
                 ? current
-                : { width, height });
+                : next);
             setSizeReady(true);
         };
         update();
@@ -363,6 +372,8 @@ export default function ChannelPages({
                                     ref={(node) => { sheets.current[sheetIndex] = node; }}
                                     className="channel-sheet"
                                     style={{ zIndex: pages.length - sheetIndex,
+                                        top: size.top, left: size.left,
+                                        width: size.containerWidth, height: size.containerHeight,
                                         "--channel-key-color": musicColor(pageGradientKey(page)),
                                     } as React.CSSProperties}
                                     aria-hidden={sheetIndex !== activePage}
