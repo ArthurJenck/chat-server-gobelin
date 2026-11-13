@@ -76,7 +76,10 @@ describe("Channel layout", () => {
 
         expect(blocks.length).toBeGreaterThan(2);
         expect(blocks[0].first).toBe(true);
+        expect(blocks[0].last).toBe(false);
         expect(blocks[1].first).toBe(false);
+        expect(blocks[1].last).toBe(false);
+        expect(blocks.at(-2)?.last).toBe(true);
         expect(pages.length).toBeGreaterThan(1);
         expect(pages[0].at(-1)?.message.id).toBe(2);
         expect(pages[0].length).toBeGreaterThan(1);
@@ -221,10 +224,25 @@ describe("Channel page", () => {
         expect(document.querySelector(".channel-key-star")).toBeNull();
         expect(document.querySelector(".channel-key-symbol")).toBeNull();
         expect(document.querySelector(".channel-message-author-own img")).toHaveAttribute("src", "/pictos/note.svg");
-        expect(document.querySelectorAll(".channel-staff-coda")).toHaveLength(4);
+        expect(document.querySelectorAll(".channel-staff-coda:not(.channel-staff-coda-blur)")).toHaveLength(4);
+        expect(document.querySelectorAll(".channel-staff-coda-blur")).toHaveLength(4);
         expect(screen.queryByRole("checkbox", { name: "Clé récupérée" })).not.toBeInTheDocument();
         await userEvent.click(screen.getByRole("link", { name: "Retour aux channels" }));
         expect(await screen.findByRole("heading", { name: "Mes partitions" })).toBeInTheDocument();
+    });
+
+    it("shows staff ends only at the start and end of a multiline message", async () => {
+        messageAreaHeight = 120;
+        mockChannel([message(1, "Bonjour tout le monde ".repeat(18))]);
+        renderApp("/channels/5");
+
+        await waitFor(() => expect(document.querySelectorAll(".channel-staff").length).toBeGreaterThan(2));
+        const staffs = [...document.querySelectorAll(".channel-staff")];
+        expect(staffs.filter((staff) => staff.querySelector(".channel-staff-coda-left"))).toHaveLength(1);
+        expect(staffs.filter((staff) => staff.querySelector(".channel-staff-coda-right"))).toHaveLength(1);
+        expect(staffs.filter((staff) => !staff.querySelector(".channel-staff-coda"))).toHaveLength(staffs.length - 2);
+        expect(document.querySelectorAll(".channel-staff-coda-blur")).toHaveLength(2);
+        expect(document.querySelectorAll(".channel-staff-lines-blur")).toHaveLength(staffs.length);
     });
 
     it("shows an anonymous whole rest without an author or playback", async () => {
@@ -303,25 +321,25 @@ describe("Channel page", () => {
         expect(pagination.nextElementSibling).toHaveClass("channel-composer");
         expect(within(pagination).getAllByRole("button")).toHaveLength(5);
         expect(within(pagination).getAllByRole("button").map((button) => button.getAttribute("aria-label")))
-            .toEqual([5, 4, 3, 2, 1].map((page) => `Aller à la page ${page} sur 8`));
-        expect(screen.getByRole("button", { name: "Aller à la page 1 sur 8" }))
+            .toEqual([4, 5, 6, 7, 8].map((page) => `Aller à la page ${page} sur 8`));
+        expect(screen.getByRole("button", { name: "Aller à la page 8 sur 8" }))
             .toHaveAttribute("aria-current", "page");
 
-        await userEvent.click(screen.getByRole("button", { name: "Aller à la page 5 sur 8" }));
+        await userEvent.click(screen.getByRole("button", { name: "Aller à la page 4 sur 8" }));
         await waitFor(() => expect(scroller.scrollLeft).toBe(3 * 360), { timeout: 2500 });
-        expect(screen.getByRole("button", { name: "Aller à la page 5 sur 8" }))
+        expect(screen.getByRole("button", { name: "Aller à la page 4 sur 8" }))
             .toHaveAttribute("aria-current", "page");
-        expect(screen.getByRole("button", { name: "Aller à la page 3 sur 8" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Aller à la page 7 sur 8" })).toBeInTheDocument();
-        expect(screen.queryByRole("button", { name: "Aller à la page 1 sur 8" })).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Aller à la page 2 sur 8" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Aller à la page 6 sur 8" })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Aller à la page 8 sur 8" })).not.toBeInTheDocument();
         expect(within(pagination).getAllByRole("button").map((button) => button.getAttribute("aria-label")))
-            .toEqual([7, 6, 5, 4, 3].map((page) => `Aller à la page ${page} sur 8`));
+            .toEqual([2, 3, 4, 5, 6].map((page) => `Aller à la page ${page} sur 8`));
 
         scroller.scrollLeft = 360;
         fireEvent.scroll(scroller);
-        expect(screen.getByRole("button", { name: "Aller à la page 7 sur 8" }))
+        expect(screen.getByRole("button", { name: "Aller à la page 2 sur 8" }))
             .toHaveAttribute("aria-current", "page");
-        expect(screen.getByRole("button", { name: "Aller à la page 8 sur 8" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Aller à la page 1 sur 8" })).toBeInTheDocument();
     });
 
     it("updates the number in the active dot while a page is turning", async () => {
@@ -332,12 +350,12 @@ describe("Channel page", () => {
         await waitFor(() => expect(document.querySelectorAll(".channel-sheet")).toHaveLength(8));
         const scroller = screen.getByRole("region", { name: "Messages" });
         const pagination = screen.getByRole("navigation", { name: "Pages des messages" });
-        expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("1");
+        expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("8");
 
         scroller.scrollLeft = 6.4 * 360;
         fireEvent.scroll(scroller);
 
-        expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("2");
+        expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("7");
         expect(scroller.scrollLeft).toBe(6.4 * 360);
     });
 
@@ -398,7 +416,7 @@ describe("Channel page", () => {
         const scroller = screen.getByRole("region", { name: "Messages" });
         scroller.scrollLeft = 0;
         fireEvent.scroll(scroller);
-        expect(screen.getByRole("button", { name: "Aller à la page 4 sur 4" }))
+        expect(screen.getByRole("button", { name: "Aller à la page 1 sur 4" }))
             .toHaveAttribute("aria-current", "page");
 
         await userEvent.type(screen.getByLabelText("Message"), "Mon nouveau message");
@@ -408,7 +426,7 @@ describe("Channel page", () => {
         await waitFor(() => expect(scroller.scrollLeft).toBeGreaterThan(0));
         expect(scroller.scrollLeft).toBeLessThan(4 * 360);
         await waitFor(() => expect(scroller.scrollLeft).toBe(4 * 360), { timeout: 3000 });
-        expect(screen.getByRole("button", { name: "Aller à la page 1 sur 5" }))
+        expect(screen.getByRole("button", { name: "Aller à la page 5 sur 5" }))
             .toHaveAttribute("aria-current", "page");
         expect(Array.from(
             document.querySelectorAll(".channel-sheet[aria-hidden='false'] .channel-syllable p"),

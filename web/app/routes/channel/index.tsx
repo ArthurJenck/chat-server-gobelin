@@ -206,7 +206,9 @@ export default function ChannelPage() {
                             busy ||
                             (hasKey && keyChannelId === null)
                         }
-                    />
+                    >
+                        <img src="/pictos/send.svg" alt="" />
+                    </button>
                 </form>
             )}
         </main>

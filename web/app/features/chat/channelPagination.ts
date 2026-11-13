@@ -31,6 +31,7 @@ export type ChannelStaffBlock = {
     plan: SoundPlan;
     row: ReturnType<typeof layoutSoundStaff>["rows"][number];
     first: boolean;
+    last: boolean;
     rowIndex: number;
     musicKey: MusicKey;
     pageKey: MusicKey;
@@ -65,6 +66,7 @@ export function buildChannelStaffs(messages: Message[], availableWidth: number) 
                 plan,
                 row: row.map((group) => ({ ...group, x: silent ? width / 2 - 7.5 : group.x + 20 })),
                 first: rowIndex === 0 && !silent,
+                last: rowIndex === rows.length - 1,
                 rowIndex,
                 musicKey,
                 pageKey: musicKey,

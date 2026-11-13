@@ -27,6 +27,11 @@ export default function KeyControl({
                     onChange={onChange}
                 />
                 <img className="channel-key-star" src="/pictos/star.svg" alt="" />
+                {ready && state.holderId !== null && state.holderName && (
+                    <span className="channel-key-holder" aria-hidden="true">
+                        {state.holderName}
+                    </span>
+                )}
                 {ready && (
                     <img className="channel-key-symbol" src="/pictos/key.svg" alt=""
                         style={{ visibility: state.holderId === null ? "visible" : "hidden" }} />

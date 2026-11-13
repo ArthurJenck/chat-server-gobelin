@@ -11,22 +11,26 @@ it("shows the key only when available and disables actions while loading or busy
     const checkbox = screen.getByRole("checkbox", { name: "Clé récupérée" });
     expect(checkbox).toBeDisabled();
     expect(container.querySelector(".channel-key-symbol")).toBeNull();
+    expect(container.querySelector(".channel-key-holder")).toBeNull();
 
     rerender(<KeyControl state={{ holderId: null, holderName: null }} userId={1}
         ready busy={false} onChange={onChange} />);
     expect(checkbox).toBeEnabled();
     expect(container.querySelector(".channel-key-symbol")).toHaveAttribute("src", "/pictos/key.svg");
+    expect(container.querySelector(".channel-key-holder")).toBeNull();
 
     rerender(<KeyControl state={{ holderId: 1, holderName: "Alice" }} userId={1}
         ready busy onChange={onChange} />);
     expect(checkbox).toBeChecked();
     expect(checkbox).toBeDisabled();
     expect(container.querySelector(".channel-key-symbol")).not.toBeVisible();
+    expect(container.querySelector(".channel-key-holder")).toHaveTextContent("Alice");
 
     rerender(<KeyControl state={{ holderId: 2, holderName: "Louis" }} userId={1}
         ready busy={false} onChange={onChange} />);
     expect(checkbox).toBeDisabled();
     expect(container.querySelector(".channel-key-symbol")).not.toBeVisible();
+    expect(container.querySelector(".channel-key-holder")).toHaveTextContent("Louis");
     expect(screen.getByText("Clé détenue par Louis")).toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
 });

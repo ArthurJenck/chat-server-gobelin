@@ -31,17 +31,29 @@ export default function Profile() {
             </button>
             <h1 className="profile-title">Mon pupitre</h1>
             {loading && <p className="profile-status">Chargement du profil…</p>}
-            {error && <p className="profile-status" role="alert">{error}</p>}
+            {error && (
+                <p className="profile-status" role="alert">
+                    {error}
+                </p>
+            )}
             {account && instrument && (
                 <>
                     <div className="profile-details">
                         <div className="profile-detail">
                             <p className="profile-label">Nom d’utilisateur :</p>
-                            <p className="profile-value" title={account.username}>{account.username}</p>
+                            <p
+                                className="profile-value"
+                                title={account.username}
+                            >
+                                {account.username}
+                            </p>
                         </div>
                         <div className="profile-detail">
                             <p className="profile-label">Instrument :</p>
-                            <p className="profile-value" title={INSTRUMENTS[instrument].label}>
+                            <p
+                                className="profile-value"
+                                title={INSTRUMENTS[instrument].label}
+                            >
                                 {INSTRUMENTS[instrument].label}
                             </p>
                         </div>
@@ -50,10 +62,16 @@ export default function Profile() {
                             to={PATHS.instrument}
                             onClick={() => setSelectedInstrument(instrument)}
                         >
-                            Je veux changer d’instrument
+                            <EmphasizedText>
+                                Je veux changer d’instrument
+                            </EmphasizedText>
                         </Link>
                     </div>
-                    <button className="profile-logout" type="button" onClick={logout}>
+                    <button
+                        className="profile-logout"
+                        type="button"
+                        onClick={logout}
+                    >
                         <EmphasizedText>Me déconnecter</EmphasizedText>
                     </button>
                 </>

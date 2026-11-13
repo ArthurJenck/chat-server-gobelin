@@ -114,6 +114,25 @@
     height: 63px;
 }
 
+.channel-key-holder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 46px;
+    overflow: hidden;
+    color: var(--color-ink);
+    font-family: var(--font-family-interface);
+    font-size: 11px;
+    font-style: var(--font-style-interface);
+    line-height: 1;
+    opacity: 0.6;
+    pointer-events: none;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transform: translate(-50%, -50%);
+}
+
 .channel-key-symbol {
     position: absolute;
     top: -8px;
@@ -266,6 +285,7 @@
 
 .channel-staff-lines-blur {
     filter: blur(4px);
+    opacity: 0.4;
 }
 
 .channel-staff-coda {
@@ -282,6 +302,11 @@
 
 .channel-staff-coda-right {
     right: 0;
+}
+
+.channel-staff-coda-blur {
+    filter: blur(4px);
+    opacity: 0.4;
 }
 
 .channel-syllable {
@@ -416,7 +441,9 @@
 }
 
 .channel-send {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 38px;
     height: 38px;
     flex: none;

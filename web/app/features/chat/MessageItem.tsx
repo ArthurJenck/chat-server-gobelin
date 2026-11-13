@@ -21,7 +21,7 @@ export default function MessageItem({
     loading: boolean;
     error: string;
 }) {
-    const { message, plan, row, first } = block;
+    const { message, plan, row, first, last, rowIndex } = block;
     const silent = isConversationRest(message);
     const nodes = useRef(new Map<number, HTMLSpanElement>());
     const playing = Boolean(visual?.blockKeys.includes(block.key));
@@ -119,11 +119,12 @@ export default function MessageItem({
                         ))}
                     </g>
                 </svg>
-                <img
-                    className="channel-staff-coda channel-staff-coda-left"
-                    src="/pictos/coda.svg"
-                    alt=""
-                />
+                {rowIndex === 0 && (
+                    <>
+                        <img className="channel-staff-coda channel-staff-coda-left channel-staff-coda-blur" src="/pictos/coda.svg" alt="" />
+                        <img className="channel-staff-coda channel-staff-coda-left" src="/pictos/coda.svg" alt="" />
+                    </>
+                )}
                 {row.map((group) => (
                     <span
                         key={group.eventIndex}
@@ -154,11 +155,12 @@ export default function MessageItem({
                         )}
                     </span>
                 ))}
-                <img
-                    className="channel-staff-coda channel-staff-coda-right"
-                    src="/pictos/coda.svg"
-                    alt=""
-                />
+                {last && (
+                    <>
+                        <img className="channel-staff-coda channel-staff-coda-right channel-staff-coda-blur" src="/pictos/coda.svg" alt="" />
+                        <img className="channel-staff-coda channel-staff-coda-right" src="/pictos/coda.svg" alt="" />
+                    </>
+                )}
             </button>
             {error && <p role="alert">{error}</p>}
         </li>

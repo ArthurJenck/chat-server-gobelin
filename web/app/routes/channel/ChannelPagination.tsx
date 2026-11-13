@@ -27,12 +27,12 @@ export default function ChannelPagination({
                         key={targetPage}
                         type="button"
                         className="channel-page-dot"
-                        aria-label={`Aller à la page ${targetPage + 1} sur ${pageCount}`}
+                        aria-label={`Aller à la page ${pageCount - targetPage} sur ${pageCount}`}
                         aria-current={isActive ? "page" : undefined}
                         onClick={() => onPageSelect(targetPage)}
                     >
                         <span className={`channel-page-dot-mark${isActive ? " channel-page-dot-mark--active" : isNeighbor ? " channel-page-dot-mark--neighbor" : ""}`}>
-                            {isActive ? targetPage + 1 : null}
+                            {isActive ? pageCount - targetPage : null}
                         </span>
                     </button>
                 );

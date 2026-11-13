@@ -9,7 +9,7 @@ it("shows five pages with the active number and sizes by distance", () => {
     const buttons = within(pagination).getAllByRole("button");
 
     expect(buttons.map((button) => button.getAttribute("aria-label")))
-        .toEqual([7, 6, 5, 4, 3].map((page) => `Aller à la page ${page} sur 10`));
+        .toEqual([4, 5, 6, 7, 8].map((page) => `Aller à la page ${page} sur 10`));
     expect(buttons.map((button) => button.firstElementChild?.className))
         .toEqual([
             "channel-page-dot-mark",
@@ -18,13 +18,13 @@ it("shows five pages with the active number and sizes by distance", () => {
             "channel-page-dot-mark channel-page-dot-mark--neighbor",
             "channel-page-dot-mark",
         ]);
-    expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("5");
+    expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("6");
 
     view.rerender(<ChannelPagination activePage={9} pageCount={10} onPageSelect={vi.fn()} />);
 
-    expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("10");
+    expect(within(pagination).getByRole("button", { current: "page" })).toHaveTextContent("1");
     expect(within(pagination).getAllByRole("button").map((button) => button.getAttribute("aria-label")))
-        .toEqual([10, 9, 8, 7, 6].map((page) => `Aller à la page ${page} sur 10`));
+        .toEqual([1, 2, 3, 4, 5].map((page) => `Aller à la page ${page} sur 10`));
 });
 
 it("selects a page and hides the pagination when there is only one page", async () => {

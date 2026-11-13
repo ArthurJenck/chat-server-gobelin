@@ -40,7 +40,7 @@ export default function ChannelPages({
     const pageIndex = useRef(0);
     const pageNavigation = useRef<gsap.core.Tween | null>(null);
     const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const navigation = useRef<{ start: number; gliss: boolean; sentIds: string[] | null } | null>(null);
+    const navigation = useRef<{ glissFrom: number; gliss: boolean; sentIds: string[] | null } | null>(null);
     const initialPlayed = useRef(false);
     const handledArrival = useRef(0);
     const [size, setSize] = useState({ width: 360, height: 600 });
@@ -77,15 +77,17 @@ export default function ChannelPages({
 
     const startNavigation = (sentIds: string[] | null = null) => {
         if (settleTimer.current) clearTimeout(settleTimer.current);
-        navigation.current = { start: pageIndex.current, gliss: false, sentIds };
+        navigation.current = { glissFrom: pageIndex.current, gliss: false, sentIds };
         playback.cancel();
     };
 
     const maybeGlissando = (target: number) => {
         const current = navigation.current;
-        if (!current || current.gliss || Math.abs(target - current.start) < 3) return;
+        if (!current || Math.abs(target - current.glissFrom) < 3) return;
+        const direction = target > current.glissFrom ? "older" : "newer";
+        current.glissFrom = target;
         current.gliss = true;
-        playback.replace([glissandoPerformance(target > current.start ? "older" : "newer")]);
+        playback.replace([glissandoPerformance(direction)]);
     };
 
     const staffAtPoint = (x: number, y: number) => {
@@ -136,7 +138,7 @@ export default function ChannelPages({
             pageIndex.current = current;
             setActivePage(current);
         }
-        maybeGlissando(current);
+        if (!pageNavigation.current) maybeGlissando(current);
     };
 
     const goToPage = (target: number, maxDuration = Infinity, sentIds: string[] | null = null) => {
@@ -164,8 +166,8 @@ export default function ChannelPages({
             ease: "none",
             onUpdate: () => syncActivePage(element.scrollLeft, element.clientWidth),
             onComplete: () => {
-                pageNavigation.current = null;
                 syncActivePage(element.scrollLeft, element.clientWidth);
+                pageNavigation.current = null;
                 finishNavigation();
             },
         });

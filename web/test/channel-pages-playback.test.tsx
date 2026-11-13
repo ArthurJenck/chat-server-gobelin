@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import ChannelPages from "../app/routes/channel/ChannelPages";
@@ -72,7 +72,7 @@ it("keeps an old page visible when polling adds a recent message", async () => {
         preloadEnabled arrival={null} onKeyChange={onKeyChange}
         onVisibleMessagesChange={onVisibleMessagesChange} />);
     await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(1));
-    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 2 sur 2" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 1 sur 2" }));
     await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(2));
 
     view.rerender(<ChannelPages messages={[message(1), message(2), message(3)]} userId={1} audio={sound.engine}
@@ -89,7 +89,7 @@ it("returns to the recent page and plays only the sent message", async () => {
         preloadEnabled arrival={null} onKeyChange={onKeyChange}
         onVisibleMessagesChange={onVisibleMessagesChange} />);
     await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(1));
-    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 2 sur 2" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 1 sur 2" }));
     await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(2));
     const previousSignal = sound.play.mock.calls[1][3] as AbortSignal;
 
@@ -100,7 +100,7 @@ it("returns to the recent page and plays only the sent message", async () => {
     expect(previousSignal.aborted).toBe(true);
     expect((sound.play.mock.calls[2][0] as SoundPlan).events.map((event) => event.text).join(""))
         .toContain("Message3");
-    expect(screen.getByRole("button", { name: "Aller à la page 1 sur 3" }))
+    expect(screen.getByRole("button", { name: "Aller à la page 3 sur 3" }))
         .toHaveAttribute("aria-current", "page");
 });
 
@@ -110,7 +110,7 @@ it("plays a descending piano glissando on a three-page jump, then the destinatio
         preloadEnabled arrival={null} onKeyChange={onKeyChange}
         onVisibleMessagesChange={onVisibleMessagesChange} />);
     await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(1));
-    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 4 sur 5" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 2 sur 5" }));
     await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(2));
     const glissando = sound.play.mock.calls[1][0] as SoundPlan;
     expect(glissando.events[0].midi).toBe(84);
@@ -121,7 +121,7 @@ it("plays a descending piano glissando on a three-page jump, then the destinatio
     expect((sound.play.mock.calls[2][0] as SoundPlan).events.map((event) => event.text).join(""))
         .toContain("Message2");
 
-    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 1 sur 5" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 5 sur 5" }));
     await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(4));
     const returnGlissando = sound.play.mock.calls[3][0] as SoundPlan;
     expect(returnGlissando.events[0].midi).toBe(60);
@@ -132,6 +132,31 @@ it("plays a descending piano glissando on a three-page jump, then the destinatio
         .toContain("Message5");
 });
 
+it("restarts a glissando after each three-page movement, including reversals", async () => {
+    const sound = audio();
+    render(<ChannelPages messages={[1, 2, 3, 4, 5, 6, 7].map(message)} userId={1} audio={sound.engine}
+        preloadEnabled arrival={null} onKeyChange={onKeyChange}
+        onVisibleMessagesChange={onVisibleMessagesChange} />);
+    await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(1));
+    const scroller = screen.getByRole("region", { name: "Messages" });
+
+    fireEvent.wheel(scroller, { deltaY: 1080 });
+    await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(2));
+    expect((sound.play.mock.calls[1][0] as SoundPlan).events[0].midi).toBe(84);
+    const firstSignal = sound.play.mock.calls[1][3] as AbortSignal;
+
+    fireEvent.wheel(scroller, { deltaY: 1080 });
+    await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(3));
+    expect(firstSignal.aborted).toBe(true);
+    expect((sound.play.mock.calls[2][0] as SoundPlan).events[0].midi).toBe(84);
+    const secondSignal = sound.play.mock.calls[2][3] as AbortSignal;
+
+    fireEvent.wheel(scroller, { deltaY: -1080 });
+    await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(4));
+    expect(secondSignal.aborted).toBe(true);
+    expect((sound.play.mock.calls[3][0] as SoundPlan).events[0].midi).toBe(60);
+});
+
 it("starts the glissando during an animated turn and waits to play the destination", async () => {
     vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
     const sound = audio();
@@ -140,11 +165,11 @@ it("starts the glissando during an animated turn and waits to play the destinati
         onVisibleMessagesChange={onVisibleMessagesChange} />);
     await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(1));
 
-    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 4 sur 4" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aller à la page 1 sur 4" }));
     await waitFor(() => expect(sound.play).toHaveBeenCalledTimes(2));
     expect((sound.play.mock.calls[1][0] as SoundPlan).events[0].midi).toBe(84);
     expect(sound.play).toHaveBeenCalledTimes(2);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Aller à la page 4 sur 4" }))
+    await waitFor(() => expect(screen.getByRole("button", { name: "Aller à la page 1 sur 4" }))
         .toHaveAttribute("aria-current", "page"), { timeout: 2500 });
     expect(sound.play).toHaveBeenCalledTimes(2);
 
