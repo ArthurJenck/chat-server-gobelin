@@ -37,6 +37,8 @@ export default function ChannelPages({
     const stage = useRef<HTMLDivElement>(null);
     const sheets = useRef<(HTMLOListElement | null)[]>([]);
     const pressedStaff = useRef<HTMLButtonElement | null>(null);
+    const touchDrag = useRef<{ startX: number; startY: number; scrollLeft: number; dragged: boolean } | null>(null);
+    const suppressClickUntil = useRef(0);
     const pageIndex = useRef(0);
     const pageNavigation = useRef<gsap.core.Tween | null>(null);
     const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -172,6 +174,20 @@ export default function ChannelPages({
                 finishNavigation();
             },
         });
+    };
+
+    const endTouchDrag = () => {
+        const drag = touchDrag.current;
+        touchDrag.current = null;
+        if (!drag?.dragged) return;
+        suppressClickUntil.current = Date.now() + 500;
+        clearPressedStaff();
+        const element = scroller.current;
+        if (!element) return;
+        const target = pageIndex.current;
+        const destination = (pages.length - 1 - target) * element.clientWidth;
+        if (Math.abs(element.scrollLeft - destination) < 1) finishNavigation();
+        else goToPage(target, 0.3);
     };
 
     useEffect(() => {
@@ -336,7 +352,7 @@ export default function ChannelPages({
                             if (Math.abs(event.currentTarget.scrollLeft - expected) > 1) startNavigation();
                         }
                         syncActivePage(event.currentTarget.scrollLeft, event.currentTarget.clientWidth);
-                        if (navigation.current && !pageNavigation.current) scheduleSettle();
+                        if (navigation.current && !pageNavigation.current && !touchDrag.current?.dragged) scheduleSettle();
                     }}
                 >
                     <div className="channel-page-track" style={{ width: `${pages.length * 100}%` }}>
@@ -344,6 +360,44 @@ export default function ChannelPages({
                             className="channel-page-stage"
                             ref={stage}
                             style={{ width: `${100 / pages.length}%` }}
+                            onTouchStart={(event) => {
+                                if (event.touches.length !== 1) return;
+                                const element = scroller.current;
+                                if (!element) return;
+                                touchDrag.current = {
+                                    startX: event.touches[0].clientX,
+                                    startY: event.touches[0].clientY,
+                                    scrollLeft: element.scrollLeft,
+                                    dragged: false,
+                                };
+                            }}
+                            onTouchMove={(event) => {
+                                const drag = touchDrag.current;
+                                const element = scroller.current;
+                                if (!drag || !element || event.touches.length !== 1) return;
+                                const dx = event.touches[0].clientX - drag.startX;
+                                const dy = event.touches[0].clientY - drag.startY;
+                                if (!drag.dragged) {
+                                    if (Math.abs(dx) < 6 || Math.abs(dx) <= Math.abs(dy)) return;
+                                    drag.dragged = true;
+                                    clearPressedStaff();
+                                    if (!navigation.current) startNavigation();
+                                }
+                                pageNavigation.current?.kill();
+                                pageNavigation.current = null;
+                                element.scrollLeft = Math.max(0, Math.min(
+                                    (pages.length - 1) * element.clientWidth,
+                                    drag.scrollLeft - dx,
+                                ));
+                                syncActivePage(element.scrollLeft, element.clientWidth);
+                            }}
+                            onTouchEnd={endTouchDrag}
+                            onTouchCancel={endTouchDrag}
+                            onClickCapture={(event) => {
+                                if (Date.now() >= suppressClickUntil.current) return;
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }}
                             onPointerMove={(event) => {
                                 if (event.pointerType !== "touch")
                                     updateHoveredStaff(event.currentTarget, event.clientX, event.clientY);

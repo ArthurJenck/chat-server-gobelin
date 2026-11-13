@@ -309,6 +309,25 @@ describe("Channel page", () => {
         Object.defineProperty(window, "innerHeight", { configurable: true, value: originalWindowHeight });
     });
 
+    it("turns a page when dragging the sheet with a finger", async () => {
+        messageAreaHeight = 120;
+        mockChannel([message(1, "Ancien"), message(2, "Deuxième"), message(3, "Récent")]);
+        renderApp("/channels/5");
+
+        await waitFor(() => expect(document.querySelectorAll(".channel-sheet")).toHaveLength(3));
+        const scroller = screen.getByRole("region", { name: "Messages" });
+        const sheet = document.querySelector<HTMLOListElement>(".channel-sheet[aria-hidden='false']")!;
+        const staff = sheet.querySelector<HTMLButtonElement>(".channel-staff")!;
+        expect(scroller.scrollLeft).toBe(720);
+
+        fireEvent.touchStart(staff, { touches: [{ clientX: 100, clientY: 60 }] });
+        fireEvent.touchMove(staff, { touches: [{ clientX: 500, clientY: 60 }] });
+        expect(scroller.scrollLeft).toBe(320);
+        expect(document.querySelector(".channel-sheet[aria-hidden='false']")).not.toBe(sheet);
+        fireEvent.touchEnd(staff, { touches: [] });
+        await waitFor(() => expect(scroller.scrollLeft).toBe(360));
+    });
+
     it("places newer page dots on the right and follows manual scrolling", async () => {
         messageAreaHeight = 120;
         mockChannel(Array.from({ length: 8 }, (_, index) => message(index + 1, `Message ${index + 1}`)));

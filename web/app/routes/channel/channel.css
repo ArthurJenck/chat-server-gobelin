@@ -14,7 +14,7 @@
     position: absolute;
     right: 0;
     left: 0;
-    z-index: 10;
+    z-index: 13;
     height: 163px;
     content: "";
     pointer-events: none;
@@ -184,6 +184,7 @@
     position: sticky;
     left: 0;
     height: 100%;
+    touch-action: none;
 }
 
 .channel-sheet {
