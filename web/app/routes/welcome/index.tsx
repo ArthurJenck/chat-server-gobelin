@@ -13,8 +13,7 @@ export default function Welcome() {
                 <span>Bienvenue à</span> <span>Harmonie</span>
             </h1>
             <div className="welcome-symbol" aria-hidden="true">
-                <img className="welcome-star" src="/pictos/star.svg" alt="" />
-                <img className="welcome-key" src="/pictos/key.svg" alt="" />
+                <img src="/pictos/logo.svg" alt="" />
             </div>
             <DottedButton
                 iconSrc="/pictos/arrow.svg"

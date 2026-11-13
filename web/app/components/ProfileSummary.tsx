@@ -32,16 +32,7 @@ export default function ProfileSummary({
                 <span>Harmonie</span>
             </h1>
             <div className="confirmation-symbol" aria-hidden="true">
-                <img
-                    className="confirmation-star"
-                    src="/pictos/star.svg"
-                    alt=""
-                />
-                <img
-                    className="confirmation-key"
-                    src="/pictos/key.svg"
-                    alt=""
-                />
+                <img src="/pictos/logo.svg" alt="" />
             </div>
             {username && instrument && (
                 <div className="confirmation-details">
